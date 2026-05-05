@@ -10,18 +10,14 @@
 }
 
 body {
-  margin: 0;
-  padding: 0;
+    height: 100vh;
 }
 
-.wrapper {
-    display: inline-flex;
-    width: 100%;
-    min-width: 1116px;
-    min-width: fit-content;
-    padding: 0;
-    background: #fff;
-    box-shadow: 0px 0px 4px 3px rgba(0, 0, 0, .05);
+/* 3-column layout */
+.layout {
+    display: grid;
+    grid-template-columns: 180px 1fr 300px;
+    height: 100vh;
 }
 
 .wrapper input, button {
@@ -42,36 +38,72 @@ body {
     }
 }
 
-
-nav {
-    width: 180px;
+/* LEFT SIDEBAR */
+.sidebar {
+    background: linear-gradient(295deg, #a35904 -50%, #f28e1c);
+    color: white;
+    padding: 1rem;
     min-height: 100vh;
-    background-image: linear-gradient(295deg,#a35904 -50%,#f28e1c);
-    box-shadow: 1px 0px 8px 0px rgba(0, 0, 0, .25);
 }
-nav ul li {
+.sidebar ul li {
     font-weight: 500;
 }
-nav li a {
+.sidebar li a {
     color: rgba(255, 255, 255, 0.883);
     display: block;
     padding: 14px;
 }
-nav button {
+.sidebar button {
     margin: 0;
     display: block;
     padding: 14px;
     font-weight: 500;
 }
-nav ul li:hover{
+.sidebar ul li:hover{
     background: #ed932c;
     transition: all 0.15s ease;
 }
-nav ul li:hover a {
+.sidebar ul li:hover a {
     color: #fff;
     transition: all 0.15s ease;
 }
-nav h2 {
+.sidebar h2 {
     padding: 10px;
     color: #fff;
+}
+
+
+/* MIDDLE COLUMN */
+.main {
+  display: flex;
+  flex-direction: column;
+}
+
+/* search bar at top */
+.search-bar {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+/* map fills remaining space */
+.map {
+  flex: 1;
+  background: #e9e9e9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* RIGHT PANEL */
+.details {
+  border-left: 1px solid #ddd;
+  padding: 1rem;
+  overflow-y: auto;
 }
