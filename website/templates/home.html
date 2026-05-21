@@ -14,9 +14,15 @@
     <div class="search-bar">
         <input type="text" placeholder="Search for a place..."/>
     </div>
-    <div class="map">
-        Insert map here
-    </div>
+    <div id="map" class="map"></div>
+    <script>
+    const map = new maplibregl.Map({
+        style: 'https://tiles.openfreemap.org/styles/liberty',
+        center: [12.563517, 55.680466],
+        zoom: 11.3,
+        container: 'map',
+    })
+    </script>
 </main>
 <aside class="details">
     <h2>Venues side panel</h2>
