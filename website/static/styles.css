@@ -16,7 +16,7 @@ body {
 /* 3-column layout */
 .layout {
     display: grid;
-    grid-template-columns: 180px 1fr 300px;
+    grid-template-columns: 210px 1fr 300px;
     height: 100vh;
 }
 
@@ -40,9 +40,14 @@ body {
 
 /* LEFT SIDEBAR */
 .sidebar {
-    background: linear-gradient(295deg, #a35904 -50%, #f28e1c);
-    color: white;
-    min-height: 100vh;
+    border-top: none;
+    border-left: none;
+    border-right: 2px solid #f28e1c;
+    border-bottom: 2px solid #f28e1c;
+
+    border-radius: 0 0 20px 0;
+    background: transparent;
+    min-height: 60vh;
 }
 /* .sidebar * {
     padding: 10px;
@@ -51,22 +56,32 @@ body {
     font-weight: 500;
 }
 .sidebar li a {
-    color: rgba(255, 255, 255, 0.883);
+    font-size: 22px;
     display: block;
     padding: 10px;
+    color: #f28e1c;
 }
 
-.sidebar ul li:hover{
-    background: #ed932c;
+/* .sidebar ul li:hover{
+    background: white;
     transition: all 0.15s ease;
-}
+} */
+
 .sidebar ul li:hover a {
     color: #fff;
     transition: all 0.15s ease;
 }
 .sidebar h2 {
+    font-size: 30px;
     padding: 10px;
-    color: #fff;
+    background: linear-gradient(295deg, #e78311, #f28e1c);
+
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+
+    /* Standard property */
+    background-clip: text;
+    color: transparent;
 }
 
 
