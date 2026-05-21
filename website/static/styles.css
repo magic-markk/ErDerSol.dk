@@ -102,6 +102,7 @@ body {
   padding: 10px;
   border-radius: 6px;
   border: 1px solid #ccc;
+  font-size: 15px;
 }
 
 /* map fills remaining space */
