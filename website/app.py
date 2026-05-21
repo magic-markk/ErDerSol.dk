@@ -56,7 +56,7 @@ def search():
     if not query or len(query) > 50:
         return jsonify([])
 
-    # optional sanitization (keeps it simple + safe)
+    # input sanitization
     query = escape(query)
 
     url = f"{SUPABASE_URL}/rest/v1/outdoor_seating_places"
