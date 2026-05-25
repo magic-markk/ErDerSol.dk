@@ -7,3 +7,4 @@ osmnx==2.1.0
 pandas==3.0.2
 ijson==3.5.0
 astral
+python-dotenv
