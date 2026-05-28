@@ -3,14 +3,19 @@ import requests
 from markupsafe import escape
 from pathlib import Path
 
-SUPABASE_URL = 'https://hpnemxpzexmxjkhuukpr.supabase.co' # supabase project url
-SUPABASE_SERVICE_KEY_PATH = ( # txt filepath with service api key
-    Path.cwd().parents[0]/
-    'data'/
-    'supabase_service_api_key.txt'
-)
-with open(SUPABASE_SERVICE_KEY_PATH, 'r') as f:
-    SUPABASE_SERVICE_KEY = f.readline()
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+
+if not SUPABASE_URL:
+    raise RuntimeError("Missing SUPABASE_URL in .env")
+
+if not SUPABASE_SERVICE_KEY:
+    raise RuntimeError("Missing SUPABASE_SERVICE_KEY in .env")
 
 SUPABASE_HEADERS = {
     "apikey": SUPABASE_SERVICE_KEY,
