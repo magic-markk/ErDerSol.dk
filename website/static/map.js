@@ -4,6 +4,7 @@ const map = new maplibregl.Map({
     zoom: 11.3,
     container: 'map',
 });
+<<<<<<< Updated upstream
 
 let userLocationMarker = null;
 
@@ -13,6 +14,17 @@ const marker = new maplibregl.Marker()
         new maplibregl.Popup().setText("Caféen?")
     )
     .addTo(map);
+=======
+
+let userLocationMarker = null;
+
+// const marker = new maplibregl.Marker()
+//     .setLngLat([12.5585918, 55.7019809])
+//     .setPopup(
+//         new maplibregl.Popup().setText("Caféen?")
+//     )
+//     .addTo(map);
+>>>>>>> Stashed changes
 
 async function loadVenues() {
     const response = await fetch("/auto_query");
@@ -48,12 +60,23 @@ function useMyLocation() {
                 userLocationMarker.remove();
             }
 
+<<<<<<< Updated upstream
             userLocationMarker = new maplibregl.Marker()
                 .setLngLat([lon, lat])
                 .setPopup(
                     new maplibregl.Popup().setText("You are here")
                 )
                 .addTo(map);
+=======
+            userLocationMarker = new maplibregl.Marker({
+                color: '#F06516'
+            })
+            .setLngLat([lon, lat])
+            .setPopup(
+                new maplibregl.Popup().setText("You are here")
+            )
+            .addTo(map);
+>>>>>>> Stashed changes
         },
         (error) => {
             console.error(error);

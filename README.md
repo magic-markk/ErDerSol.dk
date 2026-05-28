@@ -9,3 +9,13 @@ README skal indeholde følgende dokumentation:
 4. Include an AI declaration (also if not used at all).
 
 Web-app'en skal interagere med databasen med **SQL,** samt bruge regular expressions eller context-free grammar parsing. (?)
+
+
+### .env file format for accessing Supabase database
+```
+SUPABASE_URL=<your supabase project url>
+SUPABASE_PUBLISHABLE_KEY=<publishable api key>
+SUPABASE_SECRET_KEY=<secret api key>
+SUPABASE_ANONYMOUS_KEY=<anonymous api key>
+SUPABASE_SERVICE_KEY=<service api key>
+```
