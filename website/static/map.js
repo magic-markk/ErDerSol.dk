@@ -16,7 +16,6 @@ async function loadVenues() {
     const response = await fetch("/auto_query");
     const data = await response.json();
 
-
     data.forEach(venue => {
         const marker = new maplibregl.Marker()
             .setLngLat([venue.lon, venue.lat])
