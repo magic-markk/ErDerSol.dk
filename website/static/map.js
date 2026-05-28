@@ -7,10 +7,12 @@ const map = new maplibregl.Map({
 
 let userLocationMarker = null;
 
-const marker = new maplibregl.Marker()
+const hjem = new maplibregl.Marker({
+    color: '#0b1983'
+})
     .setLngLat([12.5585918, 55.7019809])
     .setPopup(
-        new maplibregl.Popup().setText("Caféen?")
+        new maplibregl.Popup().setText("Caféen?\n Dit nye hjem")
     )
     .addTo(map);
 
@@ -19,6 +21,9 @@ async function loadVenues() {
     const data = await response.json();
 
     data.forEach(venue => {
+        if (venue.name == 'Caféen?') {
+            return
+        }
         new maplibregl.Marker()
             .setLngLat([venue.lon, venue.lat])
             .setPopup(
@@ -26,6 +31,7 @@ async function loadVenues() {
             )
             .addTo(map);
     });
+    console.log(data)
 }
 
 function useMyLocation() {
