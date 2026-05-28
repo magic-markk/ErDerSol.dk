@@ -76,3 +76,4 @@ function useMyLocation() {
 }
 
 window.addEventListener("load", loadVenues);
+
