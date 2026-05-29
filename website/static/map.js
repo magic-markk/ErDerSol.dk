@@ -7,6 +7,14 @@ const map = new maplibregl.Map({
 
 let userLocationMarker = null;
 
+// Hardcoded marker for Caféen
+const cafeenMarker = new maplibregl.Marker()
+    .setLngLat([12.5585918, 55.7019809])
+    .setPopup(
+        new maplibregl.Popup().setText("Caféen?")
+    )
+    .addTo(map);
+
 async function loadVenues() {
     const response = await fetch("/auto_query");
     const data = await response.json();
@@ -19,7 +27,10 @@ async function loadVenues() {
                 type: "Feature",
                 geometry: {
                     type: "Point",
-                    coordinates: [venue.lon, venue.lat]
+                    coordinates: [
+                        Number(venue.lon),
+                        Number(venue.lat)
+                    ]
                 },
                 properties: {
                     name: venue.name,
@@ -70,7 +81,6 @@ async function loadVenues() {
         filter: ["has", "point_count"],
         layout: {
             "text-field": "{point_count_abbreviated}",
-            "text-font": ["Noto Sans Regular"],
             "text-size": 12
         }
     });
@@ -84,7 +94,7 @@ async function loadVenues() {
             "circle-color": "#11b4da",
             "circle-radius": 7,
             "circle-stroke-width": 1,
-            "circle-stroke-color": "#fff"
+            "circle-stroke-color": "#ffffff"
         }
     });
 
@@ -94,7 +104,6 @@ async function loadVenues() {
         });
 
         const clusterId = features[0].properties.cluster_id;
-
         const zoom = await map
             .getSource("venues")
             .getClusterExpansionZoom(clusterId);
@@ -107,7 +116,8 @@ async function loadVenues() {
 
     map.on("click", "unclustered-venues", (event) => {
         const coordinates = event.features[0].geometry.coordinates.slice();
-        const { name, address } = event.features[0].properties;
+        const name = event.features[0].properties.name;
+        const address = event.features[0].properties.address;
 
         new maplibregl.Popup()
             .setLngLat(coordinates)
