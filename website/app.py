@@ -46,7 +46,7 @@ def auto_query():
     '''
     sql = '''
         SELECT name, address, lat, lon
-        FROM outdoor_seating_places
+        FROM outdoor_seating_places;
     '''
 
     with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
