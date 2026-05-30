@@ -1,5 +1,15 @@
+function updateUrl(query) {
+    const url = new URL(window.location);
+
+    url.searchParams.set("search", query);
+
+    window.history.replaceState({}, "", url);
+}
+
 async function searchVenues() {
     const query = document.getElementById("searchInput").value.trim();
+
+    updateUrl(query)
 
     const response = await fetch("/search", {
         method: "POST",
