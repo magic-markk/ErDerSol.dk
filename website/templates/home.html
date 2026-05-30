@@ -10,15 +10,7 @@
 
 {% block content %}
 
-<main>
-    <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Search for a place..."/>
-        <button onclick="searchVenues()">Search</button>
-        <button onclick="useMyLocation()">Use my location</button>
-    </div>
-    <div id="map" class="map"></div>
-    <script src="/static/map.js"></script>
-</main>
+{% include 'components/map.html' %}
 <aside class="details">
     <h2>Venues side panel</h2>
     <div id="results"></div>
