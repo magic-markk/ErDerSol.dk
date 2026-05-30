@@ -13,10 +13,10 @@ const cafeenMarker = new maplibregl.Marker()
     .setLngLat([12.5585918, 55.7019809])
     .setPopup(
         new maplibregl.Popup()
-            .setHTML(
-                "<strong>Caféen?</strong>"+
-                "<br>Universitetsparken 15C, 2100 København"
-            )
+            .setHTML(`
+                <strong>Caféen?</strong>
+                <br>Universitetsparken 15C, 2100 København
+            `)
     )
     .addTo(map);
 

@@ -37,6 +37,9 @@ async function searchVenues() {
                     <p class='search-result-name'>${item.name}</p>
                 </a>
                 <p class='search-result-address'>${item.address}</p>
+                <p class='google-maps-rating'>
+                    Google Rating: ${item.google_rating} (${item.google_user_rating_count})
+                </p>
             </div>
         `)
         .join('');
