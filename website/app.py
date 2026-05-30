@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+app = Flask(__name__)
+
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
@@ -23,7 +25,14 @@ SUPABASE_HEADERS = {
     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"
 }
 
-app = Flask(__name__)
+
+class RegexConverter(BaseConverter):
+    def __init__(self, url_map, *items):
+        super(RegexConverter, self).__init__(url_map)
+        self.regex = items[0]
+
+
+app.url_map.converters['regex'] = RegexConverter
 
 @app.route('/')
 def home():
@@ -44,12 +53,16 @@ def auto_query():
     '''
     automatically query venues to add them to the map
     '''
-    url = f"{SUPABASE_URL}/rest/v1/outdoor_seating_places?select=name,address,lat,lon"
+    url = (
+        f"{SUPABASE_URL}/rest/v1/outdoor_seating_places?"
+        "select=name,address,lat,lon"
+    )
 
     res = requests.get(url, headers=SUPABASE_HEADERS)
 
     return jsonify(res.json())
 
+# @app.route('/search=<regex("[\w\s\d]*")>', methods=['POST', 'GET'])
 @app.route('/search', methods=['POST'])
 def search():
     '''

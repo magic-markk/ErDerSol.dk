@@ -1,5 +1,5 @@
 async function searchVenues() {
-    const query = document.getElementById("searchInput").value;
+    const query = document.getElementById("searchInput").value.trim();
 
     const response = await fetch("/search", {
         method: "POST",
@@ -21,3 +21,11 @@ async function searchVenues() {
         .join("");
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("searchForm");
+
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        searchVenues();
+    });
+});

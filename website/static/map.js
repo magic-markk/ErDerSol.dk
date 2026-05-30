@@ -1,3 +1,4 @@
+
 const map = new maplibregl.Map({
     style: 'https://tiles.openfreemap.org/styles/liberty',
     center: [12.563517, 55.680466],
@@ -11,9 +12,15 @@ let userLocationMarker = null;
 const cafeenMarker = new maplibregl.Marker()
     .setLngLat([12.5585918, 55.7019809])
     .setPopup(
-        new maplibregl.Popup().setText("Caféen?\n Dit nye hjem")
+        new maplibregl.Popup()
+            .setHTML(
+                "<strong>Caféen?</strong>"+
+                "<br>Universitetsparken 15C, 2100 København"
+            )
     )
     .addTo(map);
+
+
 
 async function loadVenues() {
     const response = await fetch("/auto_query");
