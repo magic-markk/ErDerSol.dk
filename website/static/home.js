@@ -32,6 +32,13 @@ async function searchVenues() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    const input = document.getElementById("searchInput");
+
+    if (window.INITIAL_QUERY) {
+        input.value = (window.INITIAL_QUERY);
+        searchVenues();
+    }
+
     const form = document.getElementById("searchForm");
 
     form.addEventListener("submit", (e) => {

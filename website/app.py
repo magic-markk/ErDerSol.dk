@@ -39,7 +39,9 @@ def home():
     '''
     render home page
     '''
-    return render_template('home.html')
+    query = request.args.get('search', '').strip()
+
+    return render_template('home.html', initial_query=query)
 
 @app.route('/bruger')
 def bruger():
