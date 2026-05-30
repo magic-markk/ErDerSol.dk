@@ -27,9 +27,12 @@ async function searchVenues() {
     }
 
     resultsDiv.innerHTML = data
-        .map(item =>
-            `<p class='search-result'>${item.name}, ${item.address}</p>`
-        )
+        .map(item => `
+            <div class='search-result'>
+                <p class='search-result-name'>${item.name}</p>
+                <p class='search-result-address'>${item.address}</p>
+            </div>
+        `)
         .join("");
 }
 
