@@ -13,9 +13,5 @@ Web-app'en skal interagere med databasen med **SQL,** samt bruge regular express
 
 ### .env file format for accessing Supabase database
 ```
-SUPABASE_URL=<your supabase project url>
-SUPABASE_PUBLISHABLE_KEY=<publishable api key>
-SUPABASE_SECRET_KEY=<secret api key>
-SUPABASE_ANONYMOUS_KEY=<anonymous api key>
-SUPABASE_SERVICE_KEY=<service api key>
+DATABASE_URL=[Supabase database connection url]
 ```
