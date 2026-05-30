@@ -22,13 +22,27 @@ async function searchVenues() {
     const resultsDiv = document.getElementById("results");
 
     if (!data.length) {
-        resultsDiv.innerHTML = "<p>No results found</p>";
+        resultsDiv.innerHTML = `
+            <div class='search-result'>
+                <p>No results found</p>
+            </div>
+        `;
         return;
     }
 
     resultsDiv.innerHTML = data
-        .map(item => `<p>${item.name}, ${item.address}</p>`)
-        .join("");
+        .map(item => `
+            <div class='search-result'>
+                <a href='${item.google_maps_uri}' target="_blank" rel="noopener noreferrer">
+                    <p class='search-result-name'>${item.name}</p>
+                </a>
+                <p class='search-result-address'>${item.address}</p>
+                <p class='google-maps-rating'>
+                    Google Rating: ${item.google_rating} (${item.google_user_rating_count})
+                </p>
+            </div>
+        `)
+        .join('');
 }
 
 document.addEventListener("DOMContentLoaded", () => {

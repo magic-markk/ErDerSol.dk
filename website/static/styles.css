@@ -233,3 +233,14 @@ body {
     padding: 1rem;
     overflow-y: auto;
 }
+
+/* See website/static/home.js for construction of elements of this class */
+.search-result {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid;
+}
+
+.search-result a {
+    color: #f28e1c;
+}
