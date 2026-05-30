@@ -240,3 +240,7 @@ body {
     padding-bottom: 5px;
     border-bottom: 1px solid;
 }
+
+.search-result a {
+    color: #f28e1c;
+}

@@ -22,18 +22,24 @@ async function searchVenues() {
     const resultsDiv = document.getElementById("results");
 
     if (!data.length) {
-        resultsDiv.innerHTML = "<p class='search-result'>No results found</p>";
+        resultsDiv.innerHTML = `
+            <div class='search-result'>
+                <p>No results found</p>
+            </div>
+        `;
         return;
     }
 
     resultsDiv.innerHTML = data
         .map(item => `
             <div class='search-result'>
-                <p class='search-result-name'>${item.name}</p>
+                <a href='${item.google_maps_uri}' target="_blank" rel="noopener noreferrer">
+                    <p class='search-result-name'>${item.osm_name}</p>
+                </a>
                 <p class='search-result-address'>${item.address}</p>
             </div>
         `)
-        .join("");
+        .join('');
 }
 
 document.addEventListener("DOMContentLoaded", () => {
