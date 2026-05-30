@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
+import psycopg
 import requests
-from markupsafe import escape
-from pathlib import Path
+
 from werkzeug.routing import BaseConverter
 
 import os
@@ -9,28 +9,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+DATABASE_URL = os.getenv("DATABASE_URL")
+conn = psycopg.connect(DATABASE_URL, sslmode="require")
+
+
 app = Flask(__name__)
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-
-if not SUPABASE_URL:
-    raise RuntimeError("Missing SUPABASE_URL in .env")
-
-if not SUPABASE_SERVICE_KEY:
-    raise RuntimeError("Missing SUPABASE_SERVICE_KEY in .env")
-
-SUPABASE_HEADERS = {
-    "apikey": SUPABASE_SERVICE_KEY,
-    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"
-}
 
 
 class RegexConverter(BaseConverter):
     def __init__(self, url_map, *items):
         super(RegexConverter, self).__init__(url_map)
         self.regex = items[0]
-
 
 app.url_map.converters['regex'] = RegexConverter
 
@@ -55,16 +44,17 @@ def auto_query():
     '''
     automatically query venues to add them to the map
     '''
-    url = (
-        f"{SUPABASE_URL}/rest/v1/outdoor_seating_places?"
-        "select=name,address,lat,lon"
-    )
+    sql = '''
+        SELECT name, address, lat, lon
+        FROM outdoor_seating_places
+    '''
 
-    res = requests.get(url, headers=SUPABASE_HEADERS)
+    with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+        cur.execute(sql)
+        rows = cur.fetchall()
 
-    return jsonify(res.json())
+    return jsonify(rows)
 
-# @app.route('/search=<regex("[\w\s\d]*")>', methods=['POST', 'GET'])
 @app.route('/search', methods=['POST'])
 def search():
     '''
@@ -77,23 +67,20 @@ def search():
     if not query or len(query) > 50:
         return jsonify([])
 
-    # input sanitization
-    query = escape(query)
+    sql = '''
+        SELECT *
+        FROM outdoor_seating_places
+        WHERE name ILIKE %(q)s
+        OR address ILIKE %(q)s;
+    '''
 
-    url = f"{SUPABASE_URL}/rest/v1/outdoor_seating_places"
+    pattern = f"%{query.replace('%', '').replace('_', '')}%"
 
-    params = {
-        "select": "*",
-        "or": f"(name.ilike.*{query}*,address.ilike.*{query}*)"
-    }
+    with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+        cur.execute(sql, {"q": pattern})
+        rows = cur.fetchall()
 
-    res = requests.get(
-        url,
-        headers=SUPABASE_HEADERS,
-        params=params
-    )
-
-    return jsonify(res.json())
+    return jsonify(rows)
 
 
 if __name__ == '__main__':
