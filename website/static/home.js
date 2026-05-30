@@ -34,7 +34,7 @@ async function searchVenues() {
         .map(item => `
             <div class='search-result'>
                 <a href='${item.google_maps_uri}' target="_blank" rel="noopener noreferrer">
-                    <p class='search-result-name'>${item.osm_name}</p>
+                    <p class='search-result-name'>${item.name}</p>
                 </a>
                 <p class='search-result-address'>${item.address}</p>
             </div>
