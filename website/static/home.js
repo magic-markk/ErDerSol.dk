@@ -22,12 +22,14 @@ async function searchVenues() {
     const resultsDiv = document.getElementById("results");
 
     if (!data.length) {
-        resultsDiv.innerHTML = "<p>No results found</p>";
+        resultsDiv.innerHTML = "<p class='search-result'>No results found</p>";
         return;
     }
 
     resultsDiv.innerHTML = data
-        .map(item => `<p>${item.name}, ${item.address}</p>`)
+        .map(item =>
+            `<p class='search-result'>${item.name}, ${item.address}</p>`
+        )
         .join("");
 }
 
