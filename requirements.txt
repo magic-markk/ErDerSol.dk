@@ -9,3 +9,4 @@ ijson==3.5.0
 astral
 python-dotenv
 psycopg[binary]
+gunicorn
