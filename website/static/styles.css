@@ -55,13 +55,16 @@ body {
 
 .map-components {
     position: fixed;
-    top: 1rem;
-    left: 1rem;
+    --base-top: 1rem;
+    --base-left: 1rem;
+    --base-gap: 1.5rem;
+    top: var(--base-top);
+    left: var(--base-left);
     z-index: 1000;
 
     display: flex;
     align-items: flex-start;
-    gap: 1.5rem;
+    gap: var(--base-gap);
 }
 
 
@@ -69,9 +72,7 @@ body {
 /* search bar at top of map */
 .search-bar {
     position: static;
-    top: 1rem;
     padding: 6px 0;
-    opacity: 100%;
     z-index: 1000;
     display: inline-block;
     overflow-wrap: wrap;
@@ -96,8 +97,10 @@ body {
 
 .search-btn {
     position: absolute;
-    left: 380px;
-    top: 37%;
+    --base-left: 380px;
+    --base-top: 37%;
+    left: var(--base-left);
+    top: var(--base-top);
     transform: translateY(-50%);
 
 
@@ -197,28 +200,33 @@ vertically if screen width is less than a specific size  */
     .layout {
         display: flex;
         flex-direction: column;
-        height: 100vh;
     }
     .map {
-        width: 100%;
         min-height: 50vh;
-        margin: 0;
-        background: #e9e9e9;
-        position: relative;
-        overflow: hidden;
     }
     .map-components {
         --dist-from-edge-change: -0.5rem;
-        position: fixed;
-        top: calc(1rem + var(--dist-from-edge-change));
-        left: calc(1rem + var(--dist-from-edge-change));
-        z-index: 1000;
-
-        display: flex;
-        align-items: flex-start;
-        gap: calc(1.5rem + var(--dist-from-edge-change));
+        top: calc(var(--base-top) + var(--dist-from-edge-change));
+        left: calc(var(--base-left) + var(--dist-from-edge-change));
+        gap: calc(var(--base-gap) + var(--dist-from-edge-change));
+    }
+    .search-bar {
+        padding: 0 0 6px 0;
+    }
+    .search-bar input {
+        --search-bar-width-change: -1rem;
+        width: calc(250px + var(--search-bar-width-change));
     }
     .search-btn {
-        left: calc(380px + var(--dist-from-edge-change));
+        /*
+        --search-button-offset:
+        --dist-from-edge-change + --search-bar-width-change
+        */
+        --search-button-offset: -1.5rem;
+        left: calc(var(--base-left) + var(--search-button-offset));
+        top: 30%;
+    }
+    .site-brand {
+        padding: 0.3rem 1rem;
     }
 }
