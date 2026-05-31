@@ -45,7 +45,7 @@ def auto_query():
     automatically query venues to add them to the map
     '''
     sql = '''
-        SELECT name, address, lat, lon
+        SELECT name, address, lat, lon, google_maps_uri
         FROM outdoor_seating_places;
     '''
 
@@ -83,5 +83,5 @@ def search():
     return jsonify(rows)
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# if __name__ == '__main__':
+#     app.run(debug=True)

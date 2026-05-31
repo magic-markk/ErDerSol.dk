@@ -1,15 +1,16 @@
 <script>
     window.INITIAL_QUERY = "{{ initial_query | e }}";
 </script>
-<main>
-    <div class="map-components">
-        <div>
-            {% include 'components/navbar.html' %}
-        </div>
+
+<div class="map-components">
+    <div>
+        {% include 'components/navbar.html' %}
+    </div>
+    <div class="search">
         <form class="search-bar" id="searchForm" autocomplete="off">
             <input type="text" id="searchInput" placeholder="Search for a place..."/>
             <button class="search-btn" id="searchBtn">
-                <svg height="200px" width="200px" version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 700 700" xml:space="preserve" fill="#000000">
+                <svg height="200px" width="200px" version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve" fill="#000000">
                     <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
                     <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
                     <g id="SVGRepo_iconCarrier">
@@ -23,8 +24,12 @@
                 </svg>
             </button>
         </form>
-        <button onclick="useMyLocation()">Use my location</button>
+        <div>
+            <button onclick="useMyLocation()" class="use-my-location">
+                Use my location
+            </button>
+        </div>
     </div>
-    <div id="map" class="map"></div>
-    <script src="/static/map.js"></script>
-</main>
+</div>
+<div id="map" class="map"></div>
+<script src="/static/map.js"></script>
