@@ -173,6 +173,7 @@ main {
 .details {
     position: relative;
     padding: 1.25rem;
+    height: 100vh;
     overflow-y: auto;
     border-left: 1px solid var(--line);
     background:

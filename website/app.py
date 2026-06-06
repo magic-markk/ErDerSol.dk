@@ -108,10 +108,7 @@ def search():
         cur.execute(sql, {"q": pattern})
         rows = cur.fetchall()
 
-    for row in rows:
-        for key, val in evaluate_location(lat=row['lat'], lon=row['lon']).items():
-            row[key] = val
-    print(rows)
+
     return jsonify(rows)
 
 
@@ -128,7 +125,7 @@ def nearby_bars():
     except (TypeError, ValueError):
         return jsonify({'error': 'lat and lon are required numbers'}), 400
 
-    radius_m = 1000
+    radius_m = 2000
     limit = 15
     candidate_limit = 25
 
@@ -143,7 +140,7 @@ def nearby_bars():
     enriched = add_weather_to_places(nearby)
     enriched = add_shadow_to_places(
         enriched,
-        radius_m=50,
+        radius_m=150,
         point_mode='outdoor',
         max_buildings=25,
         max_building_distance_m=80,
