@@ -150,7 +150,7 @@ def nearby_bars():
     enriched = add_shadow_to_places(
         conn,
         enriched,
-        radius_m=150,
+        radius_m=30,
         point_mode='outdoor',
         max_buildings=25,
         max_building_distance_m=80,
