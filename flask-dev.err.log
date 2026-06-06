@@ -4,29 +4,12 @@ Press CTRL+C to quit
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 413-004-347
-127.0.0.1 - - [06/Jun/2026 15:06:53] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:07:04] "GET /assets/ErDerSolLogo.png HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:07:05] "GET /static/styles.css HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:07:34] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:07:35] "GET /static/styles.css HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:07:35] "GET /static/home.js HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:07:35] "GET /assets/ErDerSolLogo.png HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:07:35] "GET /static/map.js HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:07:36] "GET /auto_query HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:09:28] "POST /nearby_bars HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:10:39] "GET /?search=universitet HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:10:39] "GET /static/styles.css HTTP/1.1" 304 -
-127.0.0.1 - - [06/Jun/2026 15:10:39] "GET /static/home.js HTTP/1.1" 304 -
-127.0.0.1 - - [06/Jun/2026 15:10:39] "GET /static/map.js HTTP/1.1" 304 -
-127.0.0.1 - - [06/Jun/2026 15:10:39] "GET /assets/ErDerSolLogo.png HTTP/1.1" 304 -
-127.0.0.1 - - [06/Jun/2026 15:10:40] "GET /auto_query HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:11:00] "POST /nearby_bars HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:11:31] "POST /search HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:11:32] "POST /search HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:11:32] "POST /search HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:11:32] "POST /search HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:11:32] "POST /search HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:11:32] "POST /search HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:11:32] "POST /search HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:11:35] "POST /search HTTP/1.1" 200 -
-127.0.0.1 - - [06/Jun/2026 15:11:35] "POST /search HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 17:52:02] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 17:52:02] "GET /assets/cafeen_logo.svg HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 17:52:20] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 17:52:20] "GET /static/styles.css HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 17:52:20] "GET /static/home.js HTTP/1.1" 304 -
+127.0.0.1 - - [06/Jun/2026 17:52:20] "GET /assets/ErDerSolLogo.png HTTP/1.1" 304 -
+127.0.0.1 - - [06/Jun/2026 17:52:20] "GET /static/map.js HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 17:52:20] "GET /assets/cafeen_logo.svg HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 17:52:21] "GET /auto_query HTTP/1.1" 200 -

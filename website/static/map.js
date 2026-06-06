@@ -8,6 +8,13 @@ const map = new maplibregl.Map({
 
 let userLocationMarker = null;
 
+function createCafeenMarkerElement() {
+    const marker = document.createElement("div");
+    marker.className = "cafeen-marker";
+    marker.innerHTML = `<img src="/assets/cafeen_logo.svg" alt="Cafeen?">`;
+    return marker;
+}
+
 function formatDistance(meters) {
     if (meters === null || meters === undefined) {
         return "-";
@@ -109,7 +116,10 @@ async function loadNearbyBars(lat, lon) {
 }
 
 // Hardcoded marker for Caféen
-const cafeenMarker = new maplibregl.Marker()
+const cafeenMarker = new maplibregl.Marker({
+    element: createCafeenMarkerElement(),
+    anchor: "bottom"
+})
     .setLngLat([12.5585918, 55.7019809])
     .setPopup(
         new maplibregl.Popup()

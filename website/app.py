@@ -125,7 +125,7 @@ def nearby_bars():
     except (TypeError, ValueError):
         return jsonify({'error': 'lat and lon are required numbers'}), 400
 
-    radius_m = 2000
+    radius_m = 3000
     limit = 15
     candidate_limit = 25
 
