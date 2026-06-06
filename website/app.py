@@ -126,7 +126,7 @@ def nearby_bars():
         return jsonify({'error': 'lat and lon are required numbers'}), 400
 
     radius_m = 3000
-    limit = 15
+    limit = 25
     candidate_limit = 25
 
     places = load_places_from_supabase(DEFAULT_CATEGORIES)
