@@ -3,6 +3,10 @@ import time
 
 import requests
 
+from dotenv import load_dotenv
+load_dotenv()
+MY_EMAIL = os.getenv('MY_EMAIL')
+
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 DEFAULT_OVERPASS_URLS = [
     OVERPASS_URL,
@@ -11,7 +15,7 @@ DEFAULT_OVERPASS_URLS = [
 ]
 
 HEADERS = {
-    "User-Agent": "SunScoreSchoolProject/0.1 your.email@example.com",
+    "User-Agent": f"SunScoreSchoolProject/0.1 {MY_EMAIL}",
     "Accept": "application/json",
 }
 

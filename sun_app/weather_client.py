@@ -1,9 +1,16 @@
 import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+MY_EMAIL = os.getenv('MY_EMAIL')
+
 
 BASE_URL = "https://api.met.no/weatherapi/locationforecast/2.0/complete"
 
 HEADERS = {
-    "User-Agent": "SunScoreSchoolProject/0.1 your.email@example.com"
+    "User-Agent": f"SunScoreSchoolProject/0.1 {MY_EMAIL}"
 }
 
 

@@ -41,7 +41,8 @@ async function loadVenues() {
                 },
                 properties: {
                     name: venue.name,
-                    address: venue.address
+                    address: venue.address,
+                    cloud_area: venue.cloud_area
                 }
             }))
     };
@@ -125,10 +126,11 @@ async function loadVenues() {
         const coordinates = event.features[0].geometry.coordinates.slice();
         const name = event.features[0].properties.name;
         const address = event.features[0].properties.address;
+        const cloud_area = event.features[0].properties.cloud_area;
 
         new maplibregl.Popup()
             .setLngLat(coordinates)
-            .setHTML(`<strong>${name}</strong><br>${address}`)
+            .setHTML(`<strong>${name}</strong><br>${address}, ${cloud_area}`)
             .addTo(map);
     });
 

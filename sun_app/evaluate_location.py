@@ -5,9 +5,9 @@ from geodata_client import fetch_buildings_osm
 from shadow_service import point_in_building_shadow
 
 
-def evaluate_location(lat: float, lon: float, radius_m: int = 150) -> dict:
+def evaluate_location(lat: float, lon: float) -> dict:
     weather = fetch_weather(lat, lon)
-    buildings = fetch_buildings_osm(lat, lon, radius_m=radius_m)
+    buildings = fetch_buildings_osm(lat, lon, radius_m=150)
     shadow = point_in_building_shadow(lat, lon, buildings)
 
     result = {
@@ -22,13 +22,3 @@ def evaluate_location(lat: float, lon: float, radius_m: int = 150) -> dict:
 
     return result
 
-
-
-if __name__ == "__main__":
-    # Eksempel: Nørrebro-ish
-    lat = 55.679259 # 55.679259, 12.568522
-    lon = 12.568522
-    r = 50
-
-    result = evaluate_location(lat, lon, r)
-    pprint(result)
