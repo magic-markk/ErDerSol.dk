@@ -1,19 +1,29 @@
 import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+MY_EMAIL = os.getenv('MY_EMAIL')
+
 
 BASE_URL = "https://api.met.no/weatherapi/locationforecast/2.0/complete"
-DEFAULT_USER_AGENT = "ErDerSol/0.1 github.com/jesper"
+
+HEADERS = {
+    "User-Agent": f"SunScoreSchoolProject/0.1 {MY_EMAIL}"
+}
 
 
 def fetch_weather(lat: float, lon: float, altitude: int | None = None) -> dict:
     params = {
-        "lat": round(lat, 4),
-        "lon": round(lon, 4),
+        "lat": lat,
+        "lon": lon,
     }
 
     if altitude is not None:
         params["altitude"] = altitude
 
-    response = requests.get(BASE_URL, params=params, headers=weather_headers(), timeout=20)
+    response = requests.get(BASE_URL, params=params, headers=HEADERS, timeout=20)
     response.raise_for_status()
     data = response.json()
 
@@ -38,12 +48,4 @@ def fetch_weather(lat: float, lon: float, altitude: int | None = None) -> dict:
         "symbol_code_next_1h": summary_1h.get("symbol_code"),
         "precipitation_amount_next_1h": details_1h.get("precipitation_amount"),
         "probability_of_precipitation_next_1h": details_1h.get("probability_of_precipitation"),
-    }
-
-
-def weather_headers() -> dict:
-    import os
-
-    return {
-        "User-Agent": os.getenv("MET_USER_AGENT", DEFAULT_USER_AGENT),
     }

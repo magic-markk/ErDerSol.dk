@@ -2,6 +2,10 @@ from flask import Flask, render_template, request, jsonify
 import psycopg
 import requests
 
+import sys
+sys.path.append('../sun_app')
+from evaluate_location import evaluate_location
+
 from werkzeug.routing import BaseConverter
 
 import os
@@ -45,8 +49,15 @@ def auto_query():
     automatically query venues to add them to the map
     '''
     sql = '''
-        SELECT name, address, lat, lon, google_maps_uri
-        FROM outdoor_seating_places;
+        SELECT
+            V.name,
+            V.address,
+            V.lat,
+            V.lon,
+            V.google_maps_uri,
+            W.cloud_area_fraction AS cloud_area
+        FROM outdoor_seating_places V
+            INNER JOIN venue_weather_cache W ON V.id = W.venue_id;
     '''
 
     with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
@@ -68,7 +79,7 @@ def search():
         return jsonify([])
 
     sql = '''
-        SELECT *
+        SELECT name, address, lat, lon, google_rating, google_user_rating_count, google_maps_uri
         FROM outdoor_seating_places
         WHERE name ILIKE %(q)s
         OR address ILIKE %(q)s;
@@ -80,8 +91,12 @@ def search():
         cur.execute(sql, {"q": pattern})
         rows = cur.fetchall()
 
+    for row in rows:
+        for key, val in evaluate_location(lat=row['lat'], lon=row['lon']).items():
+            row[key] = val
+    print(rows)
     return jsonify(rows)
 
 
-# if __name__ == '__main__':
-#     app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)

@@ -1,0 +1,5 @@
+requests
+astral
+shapely
+python-dotenv
+psycopg[binary]
