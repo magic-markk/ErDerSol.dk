@@ -10,5 +10,4 @@ astral
 python-dotenv
 psycopg[binary]
 gunicorn
-supabase
 python-dotenv
