@@ -8,6 +8,106 @@ const map = new maplibregl.Map({
 
 let userLocationMarker = null;
 
+function formatDistance(meters) {
+    if (meters === null || meters === undefined) {
+        return "-";
+    }
+
+    if (meters >= 1000) {
+        return `${(meters / 1000).toFixed(1)} km`;
+    }
+
+    return `${Math.round(meters)} m`;
+}
+
+function formatValue(value, suffix = "") {
+    if (value === null || value === undefined || value === "") {
+        return "-";
+    }
+
+    return `${value}${suffix}`;
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function renderNearbyBars(bars) {
+    const resultsDiv = document.getElementById("results");
+
+    if (!resultsDiv) {
+        return;
+    }
+
+    if (!bars.length) {
+        resultsDiv.innerHTML = `
+            <div class="search-result">
+                <p>No nearby bars found</p>
+            </div>
+        `;
+        return;
+    }
+
+    resultsDiv.innerHTML = bars
+        .map((bar, index) => {
+            const mapLink = bar.google_maps_uri || `https://www.google.com/maps/search/?api=1&query=${bar.lat},${bar.lon}`;
+
+            return `
+                <div class="search-result nearby-result">
+                    <a href="${escapeHtml(mapLink)}" target="_blank" rel="noopener noreferrer">
+                        <p class="search-result-name">${index + 1}. ${escapeHtml(bar.name || "Unnamed venue")}</p>
+                    </a>
+                    <p class="search-result-address">${escapeHtml(bar.address || "")}</p>
+                    <p class="nearby-score">
+                        Score: ${formatValue(bar.total_score)}/${formatValue(bar.score_max)}
+                    </p>
+                    <p>Distance: ${formatDistance(bar.distance_m)}</p>
+                    <p>
+                        Weather: ${formatValue(bar.air_temperature, " C")},
+                        wind ${formatValue(bar.wind_speed, " m/s")},
+                        clouds ${formatValue(bar.cloud_area_fraction, "%")}
+                    </p>
+                    <p class="google-maps-rating">
+                        Google Rating: ${formatValue(bar.google_rating)}
+                        (${formatValue(bar.google_user_rating_count)})
+                    </p>
+                    <p class="score-reasons">${escapeHtml(bar.score_reasons || "")}</p>
+                </div>
+            `;
+        })
+        .join("");
+}
+
+async function loadNearbyBars(lat, lon) {
+    const resultsDiv = document.getElementById("results");
+
+    if (resultsDiv) {
+        resultsDiv.innerHTML = `
+            <div class="search-result">
+                <p>Finding the best nearby sunny spots...</p>
+            </div>
+        `;
+    }
+
+    const response = await fetch("/nearby_bars", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat, lon })
+    });
+
+    if (!response.ok) {
+        throw new Error("Could not load nearby bars.");
+    }
+
+    const bars = await response.json();
+    renderNearbyBars(bars);
+}
+
 // Hardcoded marker for Caféen
 const cafeenMarker = new maplibregl.Marker()
     .setLngLat([12.5585918, 55.7019809])
@@ -158,7 +258,7 @@ function useMyLocation() {
     }
 
     navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
 
@@ -179,6 +279,21 @@ function useMyLocation() {
                     new maplibregl.Popup().setText("You are here")
                 )
                 .addTo(map);
+
+            try {
+                await loadNearbyBars(lat, lon);
+            } catch (error) {
+                console.error(error);
+                const resultsDiv = document.getElementById("results");
+
+                if (resultsDiv) {
+                    resultsDiv.innerHTML = `
+                        <div class="search-result">
+                            <p>Could not load nearby bars.</p>
+                        </div>
+                    `;
+                }
+            }
         },
         (error) => {
             console.error(error);

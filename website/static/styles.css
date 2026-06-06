@@ -181,6 +181,21 @@ body {
     color: #f28e1c;
 }
 
+.nearby-result {
+    line-height: 1.35;
+}
+
+.nearby-score {
+    color: #945610;
+    font-weight: 700;
+}
+
+.score-reasons {
+    color: #555;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
 /* Media query to show the flex items
 vertically if screen width is less than a specific size  */
 @media screen and (max-width:765px) {
