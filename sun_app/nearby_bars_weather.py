@@ -17,13 +17,6 @@ from weather_client import fetch_weather
 import psycopg
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-load_dotenv(PROJECT_ROOT / '.env')
-
-DATABASE_URL = os.getenv('DATABASE_URL')
-conn = psycopg.connect(DATABASE_URL, sslmode='require', prepare_threshold=0)
-
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CATEGORIES = ("bar", "pub", "biergarten")
 
 OUTPUT_COLUMNS = [
@@ -124,26 +117,17 @@ def load_env() -> None:
     load_dotenv(PROJECT_ROOT / "src" / ".env")
 
 
-def create_supabase(prefer_service_role: bool = False):
-    load_env()
+def create_db_connection():
+    load_dotenv(PROJECT_ROOT / '.env')
 
-    supabase_url = os.environ["SUPABASE_URL"]
-    supabase_key = None
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    conn = psycopg.connect(DATABASE_URL, sslmode='require', prepare_threshold=0)
 
-    if prefer_service_role:
-        supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-
-    supabase_key = (
-        supabase_key
-        or os.environ.get("SUPABASE_KEY")
-        or os.environ["SUPABASE_ANON_KEY"]
-    )
-
-    return create_client(supabase_url, supabase_key)
+    return conn
 
 
 def load_places_from_supabase(categories: tuple[str, ...]) -> list[dict]:
-    # supabase = create_supabase()
+    conn = create_db_connection()
 
     sql = '''
         SELECT
@@ -166,16 +150,7 @@ def load_places_from_supabase(categories: tuple[str, ...]) -> list[dict]:
         cur.execute(sql)
         rows = cur.fetchall()
 
-    # response = (
-    #     supabase
-    #     .table("outdoor_seating_places")
-    #     .select(
-    #         "id,name,address,lat,lon,outdoor_seating,category,"
-    #         "google_rating,google_user_rating_count,google_price_level,google_maps_uri"
-    #     )
-    #     .limit(10000)
-    #     .execute()
-    # )
+    conn.close()
 
     return [
         place
@@ -402,6 +377,7 @@ def load_shadow_cache(
     oldest_usable_cache = (
         datetime.now(timezone.utc) - timedelta(minutes=cache_max_age_minutes)
     )
+    conn = create_db_connection()
     sql = f'''
         SELECT *
         FROM bar_shadow_cache
@@ -413,6 +389,8 @@ def load_shadow_cache(
     with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
         cur.execute(sql, (oldest_usable_cache, place_ids))
         rows = cur.fetchall()
+
+    conn.close()
 
     # response = (
     #     supabase
@@ -518,6 +496,7 @@ def upsert_shadow_cache(records: list[dict]) -> None:
         return
 
     try:
+        conn = create_db_connection()
         sql = f'''
             INSERT INTO bar_shadow_cache (
                 {', '.join([c for c in SHADOW_CACHE_COLUMNS])}
@@ -541,16 +520,8 @@ def upsert_shadow_cache(records: list[dict]) -> None:
 
         conn.commit()
 
-        # supabase = create_supabase(prefer_service_role=True)
-        # (
-        #     supabase
-        #     .table("bar_shadow_cache")
-        #     .upsert(
-        #         records,
-        #         on_conflict="outdoor_seating_place_id",
-        #     )
-        #     .execute()
-        # )
+        conn.close()
+
         print(f"Skrev {len(records)} shadow-cache raekker til Supabase.", flush=True)
     except Exception as exc:
         print(f"Kunne ikke skrive shadow-cache til Supabase: {exc}", flush=True)
