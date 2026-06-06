@@ -5,11 +5,13 @@ import sys
 
 load_dotenv()
 
+BAR_SEARCH_RADIUS = 30
+
 DATABASE_URL = os.getenv('DATABASE_URL')
 conn = psycopg.connect(DATABASE_URL, sslmode='require')
 
 sys.path.append('../sun_app')
-from weather_client import fetch_weather
+from evaluate_location import evaluate_location
 
 select_id_lat_lon_sql = '''
     SELECT venue_id, lat, lon
@@ -27,7 +29,20 @@ update_cols = [
     'relative_humidity',
     'symbol_code_next_1h',
     'uv_index_clear_sky',
-    'wind_from_direction'
+    'wind_from_direction',
+    'in_shadow',
+    'shadow_reason',
+    'building_count_fetched',
+    'building_count_used',
+    'nearest_building_distance_m',
+    'farthest_used_building_distance_m',
+    'sun_elevation_deg',
+    'sun_azimuth_deg',
+    'blocking_building_id',
+    'blocking_building_height_m',
+    'blocking_building_distance_m',
+    'blocking_building_shadow_length_m',
+    'shadow_payload',
 ]
 
 update_sql = f'''
@@ -42,10 +57,19 @@ with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
 
 with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
     for i, row in enumerate(rows):
-        weather = fetch_weather(lat=row['lat'], lon=row['lon'])
-        weather['venue_id'] = row['venue_id']
-        cur.execute(update_sql, weather)
-        if i % 10 == 0:
-            print(i)
+        print(row['venue_id'])
+        evaluated = evaluate_location(
+            lat=row['lat'],
+            lon=row['lon'],
+            radius_m=BAR_SEARCH_RADIUS
+        )
+        evaluated['venue_id'] = row['venue_id']
+        for c in update_cols:
+            if c not in evaluated.keys():
+                evaluated[c] = None
+
+        cur.execute(update_sql, evaluated)
+
+
 
 conn.commit()
