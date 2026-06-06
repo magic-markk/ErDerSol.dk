@@ -170,6 +170,42 @@ main {
     filter: brightness(1.03);
 }
 
+.cafeen-marker {
+    position: relative;
+    width: 68px;
+    height: 68px;
+    padding: 0.35rem;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 12px 28px rgba(24, 32, 37, 0.26);
+    cursor: pointer;
+}
+
+.cafeen-marker::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -11px;
+    width: 18px;
+    height: 18px;
+    background: #ffffff;
+    border-right: 3px solid #ffffff;
+    border-bottom: 3px solid #ffffff;
+    transform: translateX(-50%) rotate(45deg);
+    box-shadow: 8px 8px 16px rgba(24, 32, 37, 0.12);
+}
+
+.cafeen-marker img {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 50%;
+}
+
 .details {
     position: relative;
     padding: 1.25rem;
