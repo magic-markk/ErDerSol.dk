@@ -126,8 +126,10 @@ def create_db_connection():
     return conn
 
 
-def load_places_from_supabase(categories: tuple[str, ...]) -> list[dict]:
-    conn = create_db_connection()
+def load_places_from_supabase(
+    categories: tuple[str, ...],
+    conn
+) -> list[dict]:
 
     sql = '''
         SELECT
@@ -150,7 +152,6 @@ def load_places_from_supabase(categories: tuple[str, ...]) -> list[dict]:
         cur.execute(sql)
         rows = cur.fetchall()
 
-    conn.close()
 
     return [
         place
@@ -241,6 +242,7 @@ def add_weather_to_places(places: list[dict]) -> list[dict]:
 
 
 def add_shadow_to_places(
+    conn,
     places: list[dict],
     radius_m: int,
     point_mode: str,
@@ -256,6 +258,7 @@ def add_shadow_to_places(
     buildings_cache = {}
     cache_bucket = current_cache_bucket(shadow_cache_minutes)
     cache_rows = load_shadow_cache(
+        conn,
         places,
         shadow_cache_max_age_minutes,
         refresh_shadow_cache,
@@ -343,7 +346,7 @@ def add_shadow_to_places(
         if cache_record is not None:
             cache_records_to_write.append(cache_record)
 
-    upsert_shadow_cache(cache_records_to_write)
+    upsert_shadow_cache(cache_records_to_write, conn)
 
     return enriched
 
@@ -358,6 +361,7 @@ def current_cache_bucket(bucket_minutes: int) -> datetime:
 
 
 def load_shadow_cache(
+    conn,
     places: list[dict],
     cache_max_age_minutes: int,
     refresh_shadow_cache: bool,
@@ -377,7 +381,6 @@ def load_shadow_cache(
     oldest_usable_cache = (
         datetime.now(timezone.utc) - timedelta(minutes=cache_max_age_minutes)
     )
-    conn = create_db_connection()
     sql = f'''
         SELECT *
         FROM bar_shadow_cache
@@ -390,7 +393,6 @@ def load_shadow_cache(
         cur.execute(sql, (oldest_usable_cache, place_ids))
         rows = cur.fetchall()
 
-    conn.close()
 
     # response = (
     #     supabase
@@ -491,12 +493,11 @@ def shadow_cache_record(
     }
 
 
-def upsert_shadow_cache(records: list[dict]) -> None:
+def upsert_shadow_cache(records: list[dict], conn) -> None:
     if not records:
         return
 
     try:
-        conn = create_db_connection()
         sql = f'''
             INSERT INTO bar_shadow_cache (
                 {', '.join([c for c in SHADOW_CACHE_COLUMNS])}
@@ -520,7 +521,6 @@ def upsert_shadow_cache(records: list[dict]) -> None:
 
         conn.commit()
 
-        conn.close()
 
         print(f"Skrev {len(records)} shadow-cache raekker til Supabase.", flush=True)
     except Exception as exc:
@@ -997,7 +997,9 @@ def main() -> None:
     user_lat = args.lat if args.lat is not None else prompt_for_coordinate("Latitude")
     user_lon = args.lon if args.lon is not None else prompt_for_coordinate("Longitude")
 
-    places = load_places_from_supabase(args.categories)
+    conn = create_db_connection()
+
+    places = load_places_from_supabase(args.categories, conn)
     candidate_limit = args.candidate_limit or args.limit
     nearby = find_nearby_places(user_lat, user_lon, places, args.radius_m, candidate_limit)
     enriched = nearby
@@ -1006,6 +1008,7 @@ def main() -> None:
 
     if args.include_shadow and not args.skip_shadow:
         enriched = add_shadow_to_places(
+            conn,
             enriched,
             radius_m=args.shadow_radius_m,
             point_mode=args.shadow_point_mode,
@@ -1043,6 +1046,8 @@ def main() -> None:
     if args.json_output:
         write_json(args.json_output, enriched)
         print(f"Skrev JSON: {args.json_output}")
+
+    conn.close()
 
 
 if __name__ == "__main__":

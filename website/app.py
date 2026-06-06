@@ -26,7 +26,6 @@ from dotenv import load_dotenv
 load_dotenv(PROJECT_ROOT / '.env')
 
 DATABASE_URL = os.getenv('DATABASE_URL')
-conn = psycopg.connect(DATABASE_URL, sslmode='require')
 
 
 app = Flask(__name__)
@@ -65,6 +64,8 @@ def auto_query():
     '''
     automatically query venues to add them to the map
     '''
+    conn = psycopg.connect(DATABASE_URL, sslmode='require', prepare_threshold=0)
+
     sql = '''
         SELECT
             V.name,
@@ -81,6 +82,8 @@ def auto_query():
         cur.execute(sql)
         rows = cur.fetchall()
 
+    conn.close()
+
     return jsonify(rows)
 
 @app.route('/search', methods=['POST'])
@@ -95,6 +98,8 @@ def search():
     if not query or len(query) > 50:
         return jsonify([])
 
+    conn = psycopg.connect(DATABASE_URL, sslmode='require', prepare_threshold=0)
+
     sql = '''
         SELECT name, address, lat, lon, google_rating, google_user_rating_count, google_maps_uri
         FROM outdoor_seating_places
@@ -102,12 +107,14 @@ def search():
         OR address ILIKE %(q)s;
     '''
 
+
     pattern = f"%{query.replace('%', '').replace('_', '')}%"
 
     with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
         cur.execute(sql, {"q": pattern})
         rows = cur.fetchall()
 
+    conn.close()
 
     return jsonify(rows)
 
@@ -125,11 +132,13 @@ def nearby_bars():
     except (TypeError, ValueError):
         return jsonify({'error': 'lat and lon are required numbers'}), 400
 
-    radius_m = 3000
-    limit = 25
-    candidate_limit = 25
+    conn = psycopg.connect(DATABASE_URL, sslmode='require', prepare_threshold=0)
 
-    places = load_places_from_supabase(DEFAULT_CATEGORIES)
+    radius_m = 3000
+    limit = 31
+    candidate_limit = 31
+
+    places = load_places_from_supabase(DEFAULT_CATEGORIES, conn)
     nearby = find_nearby_places(
         user_lat,
         user_lon,
@@ -139,6 +148,7 @@ def nearby_bars():
     )
     enriched = add_weather_to_places(nearby)
     enriched = add_shadow_to_places(
+        conn,
         enriched,
         radius_m=150,
         point_mode='outdoor',
@@ -155,6 +165,8 @@ def nearby_bars():
         key=lambda place: place.get('score', {}).get('total_score') or -1,
         reverse=True,
     )
+
+    conn.close()
 
     return jsonify([flatten_place(place) for place in enriched[:limit]])
 
