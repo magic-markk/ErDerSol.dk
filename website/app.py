@@ -128,8 +128,8 @@ def nearby_bars():
     except (TypeError, ValueError):
         return jsonify({'error': 'lat and lon are required numbers'}), 400
 
-    radius_m = 3000
-    limit = 10
+    radius_m = 1000
+    limit = 15
     candidate_limit = 25
 
     places = load_places_from_supabase(DEFAULT_CATEGORIES)
@@ -143,7 +143,7 @@ def nearby_bars():
     enriched = add_weather_to_places(nearby)
     enriched = add_shadow_to_places(
         enriched,
-        radius_m=150,
+        radius_m=50,
         point_mode='outdoor',
         max_buildings=25,
         max_building_distance_m=80,

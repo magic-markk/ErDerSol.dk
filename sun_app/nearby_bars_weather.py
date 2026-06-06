@@ -12,8 +12,15 @@ from dotenv import load_dotenv
 from geodata_client import fetch_buildings_osm
 from shadow_service import point_in_building_shadow
 from shapely.geometry import Point, Polygon
-from supabase import create_client
 from weather_client import fetch_weather
+
+import psycopg
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(PROJECT_ROOT / '.env')
+
+DATABASE_URL = os.getenv('DATABASE_URL')
+conn = psycopg.connect(DATABASE_URL, sslmode='require', prepare_threshold=0)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -73,6 +80,31 @@ OUTPUT_COLUMNS = [
     "shadow_error",
 ]
 
+SHADOW_CACHE_COLUMNS = [
+    "outdoor_seating_place_id",
+    "calculated_for",
+    "cache_bucket_minutes",
+    "lat",
+    "lon",
+    "shadow_test_lat",
+    "shadow_test_lon",
+    "shadow_test_point_source",
+    "in_shadow",
+    "shadow_reason",
+    "shadow_error",
+    "building_count_fetched",
+    "building_count_used",
+    "nearest_building_distance_m",
+    "farthest_used_building_distance_m",
+    "sun_elevation_deg",
+    "sun_azimuth_deg",
+    "blocking_building_id",
+    "blocking_building_height_m",
+    "blocking_building_distance_m",
+    "blocking_building_shadow_length_m",
+    "shadow_payload"
+]
+
 
 def parse_float(value: str) -> float:
     return float(value.strip().replace(",", "."))
@@ -111,22 +143,43 @@ def create_supabase(prefer_service_role: bool = False):
 
 
 def load_places_from_supabase(categories: tuple[str, ...]) -> list[dict]:
-    supabase = create_supabase()
+    # supabase = create_supabase()
 
-    response = (
-        supabase
-        .table("outdoor_seating_places")
-        .select(
-            "id,name,address,lat,lon,outdoor_seating,category,"
-            "google_rating,google_user_rating_count,google_price_level,google_maps_uri"
-        )
-        .limit(10000)
-        .execute()
-    )
+    sql = '''
+        SELECT
+            id,
+            name,
+            address,
+            lat,
+            lon,
+            outdoor_seating,
+            category,
+            google_rating,
+            google_user_rating_count,
+            google_price_level,
+            google_maps_uri
+        FROM outdoor_seating_places
+        LIMIT 10000
+    '''
+
+    with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+        cur.execute(sql)
+        rows = cur.fetchall()
+
+    # response = (
+    #     supabase
+    #     .table("outdoor_seating_places")
+    #     .select(
+    #         "id,name,address,lat,lon,outdoor_seating,category,"
+    #         "google_rating,google_user_rating_count,google_price_level,google_maps_uri"
+    #     )
+    #     .limit(10000)
+    #     .execute()
+    # )
 
     return [
         place
-        for row in response.data
+        for row in rows
         if (place := row_to_place(row, categories)) is not None
     ]
 
@@ -227,9 +280,7 @@ def add_shadow_to_places(
     enriched = []
     buildings_cache = {}
     cache_bucket = current_cache_bucket(shadow_cache_minutes)
-    cache_client = create_supabase()
     cache_rows = load_shadow_cache(
-        cache_client,
         places,
         shadow_cache_max_age_minutes,
         refresh_shadow_cache,
@@ -332,7 +383,6 @@ def current_cache_bucket(bucket_minutes: int) -> datetime:
 
 
 def load_shadow_cache(
-    supabase,
     places: list[dict],
     cache_max_age_minutes: int,
     refresh_shadow_cache: bool,
@@ -352,19 +402,31 @@ def load_shadow_cache(
     oldest_usable_cache = (
         datetime.now(timezone.utc) - timedelta(minutes=cache_max_age_minutes)
     )
-    response = (
-        supabase
-        .table("bar_shadow_cache")
-        .select("*")
-        .gte("calculated_for", oldest_usable_cache.isoformat())
-        .in_("outdoor_seating_place_id", place_ids)
-        .order("calculated_for", desc=True)
-        .execute()
-    )
+    sql = f'''
+        SELECT *
+        FROM bar_shadow_cache
+        WHERE
+            calculated_for >= %s
+            AND outdoor_seating_place_id = ANY(%s)
+        ORDER BY calculated_for DESC;
+    '''
+    with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+        cur.execute(sql, (oldest_usable_cache, place_ids))
+        rows = cur.fetchall()
+
+    # response = (
+    #     supabase
+    #     .table("bar_shadow_cache")
+    #     .select("*")
+    #     .gte("calculated_for", oldest_usable_cache.isoformat())
+    #     .in_("outdoor_seating_place_id", place_ids)
+    #     .order("calculated_for", desc=True)
+    #     .execute()
+    # )
 
     latest_rows = {}
 
-    for row in response.data:
+    for row in rows:
         place_id = row["outdoor_seating_place_id"]
 
         if place_id not in latest_rows:
@@ -456,16 +518,39 @@ def upsert_shadow_cache(records: list[dict]) -> None:
         return
 
     try:
-        supabase = create_supabase(prefer_service_role=True)
-        (
-            supabase
-            .table("bar_shadow_cache")
-            .upsert(
-                records,
-                on_conflict="outdoor_seating_place_id",
+        sql = f'''
+            INSERT INTO bar_shadow_cache (
+                {', '.join([c for c in SHADOW_CACHE_COLUMNS])}
             )
-            .execute()
-        )
+            VALUES (
+                {', '.join([f'%({c})s' for c in SHADOW_CACHE_COLUMNS])}
+            )
+            ON CONFLICT (outdoor_seating_place_id)
+            DO UPDATE SET
+                {', '.join(
+                    f'{c} = EXCLUDED.{c}'
+                    for c in SHADOW_CACHE_COLUMNS
+                    if c != 'outdoor_seating_place_id'
+                )}
+        '''
+        for r in records:
+            if r.get("shadow_payload") is not None:
+                r["shadow_payload"] = psycopg.types.json.Jsonb(r["shadow_payload"])
+        with conn.cursor() as cur:
+            cur.executemany(sql, records)
+
+        conn.commit()
+
+        # supabase = create_supabase(prefer_service_role=True)
+        # (
+        #     supabase
+        #     .table("bar_shadow_cache")
+        #     .upsert(
+        #         records,
+        #         on_conflict="outdoor_seating_place_id",
+        #     )
+        #     .execute()
+        # )
         print(f"Skrev {len(records)} shadow-cache raekker til Supabase.", flush=True)
     except Exception as exc:
         print(f"Kunne ikke skrive shadow-cache til Supabase: {exc}", flush=True)
