@@ -9,10 +9,9 @@ model can be tuned quickly while the data pipeline stays stable.
 MAX_POINTS = {
     "sun": 35.0,
     "weather": 25.0,
-    "reviews": 15.0,
-    "smiley": 10.0,
-    "price": 8.0,
-    "distance": 7.0,
+    "reviews": 20.0,
+    "price": 10.0,
+    "distance": 10.0,
 }
 
 TOTAL_MAX_POINTS = sum(MAX_POINTS.values())
@@ -21,7 +20,6 @@ TOTAL_MAX_POINTS = sum(MAX_POINTS.values())
 def calculate_bar_score(place: dict, search_radius_m: float) -> dict:
     weather = place.get("weather") or {}
     shadow = place.get("shadow") or {}
-    smiley = place.get("smiley") or {}
 
     sun_score, sun_reasons = score_sun(weather, shadow)
     weather_score, weather_reasons = score_weather(weather)
@@ -29,7 +27,6 @@ def calculate_bar_score(place: dict, search_radius_m: float) -> dict:
         place.get("google_rating"),
         place.get("google_user_rating_count"),
     )
-    smiley_score, smiley_reasons = score_smiley(smiley)
     price_score, price_reasons = score_price(place.get("google_price_level"))
     distance_score, distance_reasons = score_distance(
         place.get("distance_m"),
@@ -40,7 +37,6 @@ def calculate_bar_score(place: dict, search_radius_m: float) -> dict:
         sun_score
         + weather_score
         + reviews_score
-        + smiley_score
         + price_score
         + distance_score
     )
@@ -51,14 +47,12 @@ def calculate_bar_score(place: dict, search_radius_m: float) -> dict:
         "sun_score": round(sun_score, 1),
         "weather_score": round(weather_score, 1),
         "reviews_score": round(reviews_score, 1),
-        "smiley_score_points": round(smiley_score, 1),
         "price_score": round(price_score, 1),
         "distance_score": round(distance_score, 1),
         "score_reasons": build_score_reasons(
             sun_reasons,
             weather_reasons,
             reviews_reasons,
-            smiley_reasons,
             price_reasons,
             distance_reasons,
         ),
@@ -215,40 +209,21 @@ def score_reviews(rating_raw: object, review_count_raw: object) -> tuple[float, 
     return points, [f"rating {rating:g}", f"{int(review_count)} reviews"]
 
 
-def score_smiley(smiley: dict) -> tuple[float, list[str]]:
-    match_status = smiley.get("match_status")
-    smiley_value = str(smiley.get("score") or "").strip()
-
-    if match_status != "matched":
-        if match_status == "low_confidence":
-            return 4.0, ["uncertain smiley match"]
-        return 5.0, ["unknown smiley"]
-
-    mapping = {
-        "1": 10.0,
-        "2": 7.0,
-        "3": 3.0,
-        "4": 0.0,
-    }
-    points = mapping.get(smiley_value, 5.0)
-    return points, [f"smiley {smiley_value or 'unknown'}"]
-
-
 def score_price(price_level: object) -> tuple[float, list[str]]:
     price = str(price_level or "").strip().upper()
 
     mapping = {
-        "PRICE_LEVEL_FREE": 6.0,
-        "PRICE_LEVEL_INEXPENSIVE": 7.0,
-        "PRICE_LEVEL_MODERATE": 8.0,
-        "PRICE_LEVEL_EXPENSIVE": 4.0,
+        "PRICE_LEVEL_FREE": 7.0,
+        "PRICE_LEVEL_INEXPENSIVE": 9.0,
+        "PRICE_LEVEL_MODERATE": 10.0,
+        "PRICE_LEVEL_EXPENSIVE": 5.0,
         "PRICE_LEVEL_VERY_EXPENSIVE": 2.0,
     }
 
     if not price:
-        return 5.0, ["unknown price"]
+        return 6.0, ["unknown price"]
 
-    return mapping.get(price, 5.0), [price.lower()]
+    return mapping.get(price, 6.0), [price.lower()]
 
 
 def score_distance(distance_m_raw: object, search_radius_m: float) -> tuple[float, list[str]]:

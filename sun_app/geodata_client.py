@@ -22,8 +22,10 @@ def fetch_buildings_osm(lat: float, lon: float, radius_m: int = 150) -> list[dic
     Returnerer en liste af bygninger med polygon og estimeret højde.
     """
 
+    overpass_query_timeout_s = int(os.getenv("OVERPASS_QUERY_TIMEOUT_S", "15"))
+
     query = f"""
-    [out:json][timeout:25];
+    [out:json][timeout:{overpass_query_timeout_s}];
     (
       way["building"](around:{radius_m},{lat},{lon});
       relation["building"](around:{radius_m},{lat},{lon});
@@ -74,7 +76,10 @@ def post_overpass_query(query: str) -> requests.Response:
                     endpoint,
                     data=query_bytes,
                     headers=HEADERS,
-                    timeout=40,
+                    timeout=(
+                        float(os.getenv("OVERPASS_CONNECT_TIMEOUT_S", "5")),
+                        float(os.getenv("OVERPASS_READ_TIMEOUT_S", "15")),
+                    ),
                 )
 
                 if response.status_code in {429, 502, 503, 504}:

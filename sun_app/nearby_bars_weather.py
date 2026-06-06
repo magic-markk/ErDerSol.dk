@@ -2,22 +2,21 @@ import argparse
 import csv
 import json
 import math
-import re
+import os
 import time
-import xml.etree.ElementTree as ET
-from difflib import SequenceMatcher
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from bar_scoring import calculate_bar_score
+from dotenv import load_dotenv
 from geodata_client import fetch_buildings_osm
 from shadow_service import point_in_building_shadow
 from shapely.geometry import Point, Polygon
+from supabase import create_client
 from weather_client import fetch_weather
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_PLACES_CSV = PROJECT_ROOT / "outdoor_seating_places.csv"
-DEFAULT_SMILEY_XML = PROJECT_ROOT / "Smiley_xml.xml"
 DEFAULT_CATEGORIES = ("bar", "pub", "biergarten")
 
 OUTPUT_COLUMNS = [
@@ -32,7 +31,6 @@ OUTPUT_COLUMNS = [
     "sun_score",
     "weather_score",
     "reviews_score",
-    "smiley_score_points",
     "price_score",
     "distance_score",
     "score_reasons",
@@ -40,17 +38,6 @@ OUTPUT_COLUMNS = [
     "google_user_rating_count",
     "google_price_level",
     "google_maps_uri",
-    "smiley_score",
-    "smiley_latest_control_date",
-    "smiley_name",
-    "smiley_address",
-    "smiley_postcode",
-    "smiley_city",
-    "smiley_url",
-    "smiley_match_score",
-    "smiley_name_similarity",
-    "smiley_address_similarity",
-    "smiley_match_status",
     "weather_forecast_time",
     "air_temperature",
     "relative_humidity",
@@ -68,6 +55,7 @@ OUTPUT_COLUMNS = [
     "shadow_test_lat",
     "shadow_test_lon",
     "shadow_test_point_source",
+    "shadow_cache_hit",
     "sun_status",
     "in_shadow",
     "shadow_reason",
@@ -99,47 +87,85 @@ def parse_categories(value: str) -> tuple[str, ...]:
     return categories
 
 
-def load_places(csv_path: Path, categories: tuple[str, ...]) -> list[dict]:
-    if not csv_path.exists():
-        raise FileNotFoundError(f"CSV findes ikke: {csv_path}")
+def load_env() -> None:
+    load_dotenv(PROJECT_ROOT / ".env")
+    load_dotenv(PROJECT_ROOT / "src" / ".env")
 
-    places = []
 
-    with csv_path.open(newline="", encoding="utf-8-sig") as file:
-        reader = csv.DictReader(file)
+def create_supabase(prefer_service_role: bool = False):
+    load_env()
 
-        for row in reader:
-            category = (row.get("category") or "").strip().lower()
-            outdoor_seating = (row.get("outdoor_seating") or "").strip().lower()
+    supabase_url = os.environ["SUPABASE_URL"]
+    supabase_key = None
 
-            if category not in categories:
-                continue
+    if prefer_service_role:
+        supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
-            if outdoor_seating not in {"yes", "true", "1"}:
-                continue
+    supabase_key = (
+        supabase_key
+        or os.environ.get("SUPABASE_KEY")
+        or os.environ["SUPABASE_ANON_KEY"]
+    )
 
-            try:
-                lat = float(row["lat"])
-                lon = float(row["lon"])
-            except (KeyError, TypeError, ValueError):
-                continue
+    return create_client(supabase_url, supabase_key)
 
-            places.append(
-                {
-                    "name": row.get("name") or row.get("osm_name") or row.get("google_name"),
-                    "category": category,
-                    "address": row.get("address") or row.get("osm_address") or row.get("google_address"),
-                    "lat": lat,
-                    "lon": lon,
-                    "google_rating": row.get("google_rating"),
-                    "google_user_rating_count": row.get("google_user_rating_count"),
-                    "google_price_level": row.get("google_price_level"),
-                    "google_maps_uri": row.get("google_maps_uri"),
-                    "raw": row,
-                }
-            )
 
-    return places
+def load_places_from_supabase(categories: tuple[str, ...]) -> list[dict]:
+    supabase = create_supabase()
+
+    response = (
+        supabase
+        .table("outdoor_seating_places")
+        .select(
+            "id,name,address,lat,lon,outdoor_seating,category,"
+            "google_rating,google_user_rating_count,google_price_level,google_maps_uri"
+        )
+        .limit(10000)
+        .execute()
+    )
+
+    return [
+        place
+        for row in response.data
+        if (place := row_to_place(row, categories)) is not None
+    ]
+
+
+def row_to_place(row: dict, categories: tuple[str, ...]) -> dict | None:
+    category = str(row.get("category") or "").strip().lower()
+
+    if category not in categories:
+        return None
+
+    if not is_truthy(row.get("outdoor_seating")):
+        return None
+
+    try:
+        lat = float(row["lat"])
+        lon = float(row["lon"])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+    return {
+        "id": row.get("id"),
+        "name": row.get("name") or row.get("osm_name") or row.get("google_name"),
+        "category": category,
+        "address": row.get("address") or row.get("osm_address") or row.get("google_address"),
+        "lat": lat,
+        "lon": lon,
+        "google_rating": row.get("google_rating"),
+        "google_user_rating_count": row.get("google_user_rating_count"),
+        "google_price_level": row.get("google_price_level"),
+        "google_maps_uri": row.get("google_maps_uri"),
+        "raw": row,
+    }
+
+
+def is_truthy(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+
+    return str(value or "").strip().lower() in {"yes", "true", "1"}
 
 
 def find_nearby_places(
@@ -165,296 +191,6 @@ def find_nearby_places(
         return nearby
 
     return nearby[:limit]
-
-
-def add_smiley_to_places(
-    places: list[dict],
-    smiley_xml_path: Path,
-    min_match_score: float,
-) -> list[dict]:
-    if not smiley_xml_path.exists():
-        raise FileNotFoundError(f"Smiley XML findes ikke: {smiley_xml_path}")
-
-    smiley_index = load_smiley_index(smiley_xml_path)
-    enriched = []
-
-    for place in places:
-        result = dict(place)
-        match = find_smiley_match(place, smiley_index, min_match_score)
-        result["smiley"] = match
-        enriched.append(result)
-
-    return enriched
-
-
-def load_smiley_index(xml_path: Path) -> dict:
-    rows = []
-    by_postcode = {}
-    by_address_key = {}
-
-    for _, element in ET.iterparse(xml_path, events=("end",)):
-        if element.tag != "row":
-            continue
-
-        row = {
-            "id": xml_text(element, "navnelbnr"),
-            "cvr": xml_text(element, "cvrnr"),
-            "p_number": xml_text(element, "pnr"),
-            "name": xml_text(element, "navn1"),
-            "address": xml_text(element, "adresse1"),
-            "postcode": xml_text(element, "postnr"),
-            "city": xml_text(element, "By"),
-            "latest_control": xml_text(element, "seneste_kontrol"),
-            "latest_control_date": xml_text(element, "seneste_kontrol_dato"),
-            "url": xml_text(element, "URL"),
-            "branch": xml_text(element, "branche"),
-        }
-        row["full_address"] = format_smiley_address(row)
-        row["address_key"] = address_key(row["address"])
-        rows.append(row)
-        by_postcode.setdefault(row["postcode"], []).append(row)
-
-        if row["address_key"]:
-            by_address_key.setdefault(row["address_key"], []).append(row)
-
-        element.clear()
-
-    return {
-        "rows": rows,
-        "by_postcode": by_postcode,
-        "by_address_key": by_address_key,
-    }
-
-
-def find_smiley_match(
-    place: dict,
-    smiley_index: dict,
-    min_match_score: float,
-) -> dict:
-    place_postcode = extract_postcode(place.get("address"))
-    candidates = smiley_candidates_for_place(place, smiley_index)
-
-    best = None
-    best_score = -1.0
-    best_name_similarity = 0.0
-    best_address_similarity = 0.0
-
-    for candidate in candidates:
-        name_similarity = max_name_similarity(place, candidate)
-        address_similarity = max_address_similarity(place, candidate)
-        same_postcode_bonus = 0.08 if place_postcode and place_postcode == candidate["postcode"] else 0.0
-        score = min(1.0, (name_similarity * 0.45) + (address_similarity * 0.55) + same_postcode_bonus)
-
-        if score > best_score:
-            best = candidate
-            best_score = score
-            best_name_similarity = name_similarity
-            best_address_similarity = address_similarity
-
-    if best is None:
-        return {
-            "match_status": "not_found",
-        }
-
-    if is_low_confidence_smiley_match(
-        best_score,
-        best_name_similarity,
-        best_address_similarity,
-        min_match_score,
-    ):
-        return {
-            "match_status": "low_confidence",
-            "match_score": round(best_score, 3),
-            "name_similarity": round(best_name_similarity, 3),
-            "address_similarity": round(best_address_similarity, 3),
-            "candidate_name": best["name"],
-            "candidate_address": best["full_address"],
-            "candidate_url": best["url"],
-        }
-
-    return {
-        "match_status": "matched",
-        "match_score": round(best_score, 3),
-        "name_similarity": round(best_name_similarity, 3),
-        "address_similarity": round(best_address_similarity, 3),
-        "score": best["latest_control"],
-        "latest_control_date": best["latest_control_date"],
-        "name": best["name"],
-        "address": best["address"],
-        "postcode": best["postcode"],
-        "city": best["city"],
-        "url": best["url"],
-        "cvr": best["cvr"],
-        "p_number": best["p_number"],
-    }
-
-
-def smiley_candidates_for_place(place: dict, smiley_index: dict) -> list[dict]:
-    candidates = []
-    seen_ids = set()
-
-    def add_rows(rows: list[dict]) -> None:
-        for row in rows:
-            row_id = row.get("id")
-
-            if row_id in seen_ids:
-                continue
-
-            seen_ids.add(row_id)
-            candidates.append(row)
-
-    for key in address_keys_for_place(place):
-        add_rows(smiley_index["by_address_key"].get(key, []))
-
-    place_postcode = extract_postcode(place.get("address"))
-    if place_postcode:
-        add_rows(smiley_index["by_postcode"].get(place_postcode, []))
-
-    if not candidates:
-        return smiley_index["rows"]
-
-    return candidates
-
-
-def is_low_confidence_smiley_match(
-    match_score: float,
-    name_similarity: float,
-    address_similarity: float,
-    min_match_score: float,
-) -> bool:
-    if match_score < min_match_score:
-        return True
-
-    # Strong address matches can otherwise hit the wrong business in hotels,
-    # food halls, stations, etc. A weak name needs a very strong combined score.
-    if name_similarity < 0.55 and match_score < 0.88:
-        return True
-
-    if address_similarity < 0.45 and name_similarity < 0.85:
-        return True
-
-    return False
-
-
-def max_name_similarity(place: dict, smiley_row: dict) -> float:
-    names = [
-        place.get("name"),
-        place.get("raw", {}).get("google_name"),
-        place.get("raw", {}).get("osm_name"),
-    ]
-    similarities = [
-        string_similarity(name, smiley_row["name"])
-        for name in names
-        if name
-    ]
-    return max(similarities, default=0.0)
-
-
-def max_address_similarity(place: dict, smiley_row: dict) -> float:
-    addresses = [
-        place.get("address"),
-        place.get("raw", {}).get("google_address"),
-        place.get("raw", {}).get("osm_address"),
-    ]
-    smiley_addresses = [
-        smiley_row["full_address"],
-        " ".join(part for part in [smiley_row["address"], smiley_row["postcode"]] if part),
-        smiley_row["address"],
-    ]
-
-    similarities = [
-        string_similarity(address, smiley_address)
-        for address in addresses
-        for smiley_address in smiley_addresses
-        if address and smiley_address
-    ]
-    return max(similarities, default=0.0)
-
-
-def string_similarity(left: str, right: str) -> float:
-    left_normalized = normalize_match_text(left)
-    right_normalized = normalize_match_text(right)
-
-    if not left_normalized or not right_normalized:
-        return 0.0
-
-    return SequenceMatcher(None, left_normalized, right_normalized).ratio()
-
-
-def normalize_match_text(value: str) -> str:
-    value = value.lower()
-    value = value.replace("&", " og ")
-    value = re.sub(r"[^0-9a-zæøå]+", " ", value)
-    value = re.sub(r"\b(st|sal|tv|th|kl|kld|mf)\b", " ", value)
-    return " ".join(value.split())
-
-
-def extract_postcode(value: str | None) -> str | None:
-    if not value:
-        return None
-
-    match = re.search(r"\b\d{4}\b", value)
-    if not match:
-        return None
-
-    return match.group(0)
-
-
-def address_keys_for_place(place: dict) -> list[str]:
-    addresses = [
-        place.get("address"),
-        place.get("raw", {}).get("google_address"),
-        place.get("raw", {}).get("osm_address"),
-    ]
-    keys = []
-
-    for value in addresses:
-        key = address_key(value)
-
-        if key and key not in keys:
-            keys.append(key)
-
-    return keys
-
-
-def address_key(value: str | None) -> str | None:
-    if not value:
-        return None
-
-    address_part = value.split(",")[0]
-    normalized = normalize_match_text(address_part)
-    house_number_match = re.search(r"\b\d+[a-z]?\b", normalized)
-
-    if not house_number_match:
-        return normalized or None
-
-    street = normalized[: house_number_match.start()].strip()
-    house_number = house_number_match.group(0)
-
-    if not street:
-        return house_number
-
-    return f"{street} {house_number}"
-
-
-def xml_text(element: ET.Element, tag: str) -> str:
-    child = element.find(tag)
-
-    if child is None or child.text is None:
-        return ""
-
-    return " ".join(child.text.split())
-
-
-def format_smiley_address(row: dict) -> str:
-    return ", ".join(
-        part
-        for part in [
-            row["address"],
-            " ".join(part for part in [row["postcode"], row["city"]] if part),
-        ]
-        if part
-    )
 
 
 def add_weather_to_places(places: list[dict]) -> list[dict]:
@@ -484,14 +220,46 @@ def add_shadow_to_places(
     max_building_distance_m: float,
     cache_grid_m: float,
     request_delay_s: float,
+    shadow_cache_minutes: int,
+    shadow_cache_max_age_minutes: int,
+    refresh_shadow_cache: bool,
 ) -> list[dict]:
     enriched = []
     buildings_cache = {}
+    cache_bucket = current_cache_bucket(shadow_cache_minutes)
+    cache_client = create_supabase()
+    cache_rows = load_shadow_cache(
+        cache_client,
+        places,
+        shadow_cache_max_age_minutes,
+        refresh_shadow_cache,
+    )
+    print(
+        f"Shadow cache: {len(cache_rows)}/{len(places)} hits "
+        f"inden for {shadow_cache_max_age_minutes} min.",
+        flush=True,
+    )
+    cache_records_to_write = []
 
-    for place in places:
+    for index, place in enumerate(places, start=1):
+        cached_row = cache_rows.get(place.get("id"))
+
+        if cached_row:
+            result = apply_shadow_cache_row(place, cached_row)
+            enriched.append(result)
+            print(
+                f"Shadow cache hit {index}/{len(places)}: {place.get('name')}",
+                flush=True,
+            )
+            continue
+
         result = dict(place)
 
         try:
+            print(
+                f"Henter bygninger {index}/{len(places)}: {place.get('name')}...",
+                flush=True,
+            )
             buildings, cache_hit = fetch_cached_buildings(
                 place["lat"],
                 place["lon"],
@@ -513,11 +281,17 @@ def add_shadow_to_places(
                 max_count=max_buildings,
                 max_distance_m=max_building_distance_m,
             )
-            shadow = point_in_building_shadow(shadow_lat, shadow_lon, nearby_buildings)
+            shadow = point_in_building_shadow(
+                shadow_lat,
+                shadow_lon,
+                nearby_buildings,
+                when_utc=cache_bucket,
+            )
             result["shadow"] = shadow
             result["shadow_test_lat"] = shadow_lat
             result["shadow_test_lon"] = shadow_lon
             result["shadow_test_point_source"] = point_source
+            result["shadow_cache_hit"] = False
             result["building_count_fetched"] = len(buildings)
             result["building_count_used"] = len(nearby_buildings)
             result["building_cache_hit"] = cache_hit
@@ -529,6 +303,7 @@ def add_shadow_to_places(
             result["shadow_test_lat"] = None
             result["shadow_test_lon"] = None
             result["shadow_test_point_source"] = None
+            result["shadow_cache_hit"] = False
             result["building_count_fetched"] = None
             result["building_count_used"] = None
             result["building_cache_hit"] = None
@@ -537,8 +312,163 @@ def add_shadow_to_places(
             result["shadow_error"] = str(exc)
 
         enriched.append(result)
+        cache_record = shadow_cache_record(result, cache_bucket, shadow_cache_minutes)
+
+        if cache_record is not None:
+            cache_records_to_write.append(cache_record)
+
+    upsert_shadow_cache(cache_records_to_write)
 
     return enriched
+
+
+def current_cache_bucket(bucket_minutes: int) -> datetime:
+    if bucket_minutes <= 0:
+        raise ValueError("shadow cache bucket skal vaere stoerre end 0 minutter")
+
+    now = datetime.now(timezone.utc)
+    minute = (now.minute // bucket_minutes) * bucket_minutes
+    return now.replace(minute=minute, second=0, microsecond=0)
+
+
+def load_shadow_cache(
+    supabase,
+    places: list[dict],
+    cache_max_age_minutes: int,
+    refresh_shadow_cache: bool,
+) -> dict[int, dict]:
+    if refresh_shadow_cache:
+        return {}
+
+    place_ids = [
+        int(place["id"])
+        for place in places
+        if place.get("id") is not None
+    ]
+
+    if not place_ids:
+        return {}
+
+    oldest_usable_cache = (
+        datetime.now(timezone.utc) - timedelta(minutes=cache_max_age_minutes)
+    )
+    response = (
+        supabase
+        .table("bar_shadow_cache")
+        .select("*")
+        .gte("calculated_for", oldest_usable_cache.isoformat())
+        .in_("outdoor_seating_place_id", place_ids)
+        .order("calculated_for", desc=True)
+        .execute()
+    )
+
+    latest_rows = {}
+
+    for row in response.data:
+        place_id = row["outdoor_seating_place_id"]
+
+        if place_id not in latest_rows:
+            latest_rows[place_id] = row
+
+    return latest_rows
+
+
+def apply_shadow_cache_row(place: dict, cache_row: dict) -> dict:
+    result = dict(place)
+    shadow_payload = cache_row.get("shadow_payload") or {}
+    blocking_building = cached_blocking_building(cache_row)
+
+    result["shadow"] = shadow_payload or {
+        "in_shadow": cache_row.get("in_shadow"),
+        "reason": cache_row.get("shadow_reason"),
+        "sun": {
+            "timestamp_utc": cache_row.get("calculated_for"),
+            "sun_elevation_deg": cache_row.get("sun_elevation_deg"),
+            "sun_azimuth_deg": cache_row.get("sun_azimuth_deg"),
+        },
+        "blocking_building": blocking_building,
+    }
+    result["shadow_test_lat"] = cache_row.get("shadow_test_lat")
+    result["shadow_test_lon"] = cache_row.get("shadow_test_lon")
+    result["shadow_test_point_source"] = cache_row.get("shadow_test_point_source")
+    result["shadow_cache_hit"] = True
+    result["building_count_fetched"] = cache_row.get("building_count_fetched")
+    result["building_count_used"] = cache_row.get("building_count_used")
+    result["building_cache_hit"] = True
+    result["nearest_building_distance_m"] = cache_row.get("nearest_building_distance_m")
+    result["farthest_used_building_distance_m"] = cache_row.get("farthest_used_building_distance_m")
+    result["shadow_error"] = cache_row.get("shadow_error")
+    return result
+
+
+def cached_blocking_building(cache_row: dict) -> dict | None:
+    if cache_row.get("blocking_building_id") is None:
+        return None
+
+    return {
+        "id": cache_row.get("blocking_building_id"),
+        "height_m": cache_row.get("blocking_building_height_m"),
+        "distance_m": cache_row.get("blocking_building_distance_m"),
+        "shadow_length_m": cache_row.get("blocking_building_shadow_length_m"),
+    }
+
+
+def shadow_cache_record(
+    place: dict,
+    cache_bucket: datetime,
+    cache_bucket_minutes: int,
+) -> dict | None:
+    if place.get("id") is None:
+        return None
+
+    shadow = place.get("shadow") or {}
+    sun = shadow.get("sun") or {}
+    blocking_building = shadow.get("blocking_building") or {}
+
+    return {
+        "outdoor_seating_place_id": int(place["id"]),
+        "calculated_for": cache_bucket.isoformat(),
+        "cache_bucket_minutes": cache_bucket_minutes,
+        "lat": place.get("lat"),
+        "lon": place.get("lon"),
+        "shadow_test_lat": place.get("shadow_test_lat"),
+        "shadow_test_lon": place.get("shadow_test_lon"),
+        "shadow_test_point_source": place.get("shadow_test_point_source"),
+        "in_shadow": shadow.get("in_shadow"),
+        "shadow_reason": shadow.get("reason"),
+        "shadow_error": place.get("shadow_error"),
+        "building_count_fetched": place.get("building_count_fetched"),
+        "building_count_used": place.get("building_count_used"),
+        "nearest_building_distance_m": place.get("nearest_building_distance_m"),
+        "farthest_used_building_distance_m": place.get("farthest_used_building_distance_m"),
+        "sun_elevation_deg": sun.get("sun_elevation_deg"),
+        "sun_azimuth_deg": sun.get("sun_azimuth_deg"),
+        "blocking_building_id": blocking_building.get("id"),
+        "blocking_building_height_m": blocking_building.get("height_m"),
+        "blocking_building_distance_m": blocking_building.get("distance_m"),
+        "blocking_building_shadow_length_m": blocking_building.get("shadow_length_m"),
+        "shadow_payload": shadow,
+    }
+
+
+def upsert_shadow_cache(records: list[dict]) -> None:
+    if not records:
+        return
+
+    try:
+        supabase = create_supabase(prefer_service_role=True)
+        (
+            supabase
+            .table("bar_shadow_cache")
+            .upsert(
+                records,
+                on_conflict="outdoor_seating_place_id",
+            )
+            .execute()
+        )
+        print(f"Skrev {len(records)} shadow-cache raekker til Supabase.", flush=True)
+    except Exception as exc:
+        print(f"Kunne ikke skrive shadow-cache til Supabase: {exc}", flush=True)
 
 
 def fetch_cached_buildings(
@@ -721,7 +651,6 @@ def point_just_outside_polygon(poly: Polygon, lat: float, lon: float) -> tuple[f
 def flatten_place(place: dict) -> dict:
     weather = place.get("weather") or {}
     shadow = place.get("shadow") or {}
-    smiley = place.get("smiley") or {}
     score = place.get("score") or {}
     sun = shadow.get("sun") or {}
     blocking_building = shadow.get("blocking_building") or {}
@@ -739,7 +668,6 @@ def flatten_place(place: dict) -> dict:
         "sun_score": score.get("sun_score"),
         "weather_score": score.get("weather_score"),
         "reviews_score": score.get("reviews_score"),
-        "smiley_score_points": score.get("smiley_score_points"),
         "price_score": score.get("price_score"),
         "distance_score": score.get("distance_score"),
         "score_reasons": score.get("score_reasons"),
@@ -747,17 +675,6 @@ def flatten_place(place: dict) -> dict:
         "google_user_rating_count": place.get("google_user_rating_count"),
         "google_price_level": place.get("google_price_level"),
         "google_maps_uri": place.get("google_maps_uri"),
-        "smiley_score": smiley.get("score"),
-        "smiley_latest_control_date": smiley.get("latest_control_date"),
-        "smiley_name": smiley.get("name") or smiley.get("candidate_name"),
-        "smiley_address": smiley.get("address") or smiley.get("candidate_address"),
-        "smiley_postcode": smiley.get("postcode"),
-        "smiley_city": smiley.get("city"),
-        "smiley_url": smiley.get("url") or smiley.get("candidate_url"),
-        "smiley_match_score": smiley.get("match_score"),
-        "smiley_name_similarity": smiley.get("name_similarity"),
-        "smiley_address_similarity": smiley.get("address_similarity"),
-        "smiley_match_status": smiley.get("match_status"),
         "weather_forecast_time": weather.get("forecast_time"),
         "air_temperature": weather.get("air_temperature"),
         "relative_humidity": weather.get("relative_humidity"),
@@ -775,6 +692,7 @@ def flatten_place(place: dict) -> dict:
         "shadow_test_lat": place.get("shadow_test_lat"),
         "shadow_test_lon": place.get("shadow_test_lon"),
         "shadow_test_point_source": place.get("shadow_test_point_source"),
+        "shadow_cache_hit": place.get("shadow_cache_hit"),
         "sun_status": sun_status_from_shadow(in_shadow),
         "in_shadow": in_shadow,
         "shadow_reason": shadow.get("reason"),
@@ -801,7 +719,6 @@ def print_results(places: list[dict]) -> None:
     for index, place in enumerate(places, start=1):
         weather = place.get("weather") or {}
         shadow = place.get("shadow") or {}
-        smiley = place.get("smiley") or {}
         score = place.get("score") or {}
         sun = shadow.get("sun") or {}
 
@@ -810,7 +727,7 @@ def print_results(places: list[dict]) -> None:
             print(
                 f"   Score: {score.get('total_score')}/{score.get('score_max')} "
                 f"(sun {score.get('sun_score')}, weather {score.get('weather_score')}, "
-                f"reviews {score.get('reviews_score')}, smiley {score.get('smiley_score_points')}, "
+                f"reviews {score.get('reviews_score')}, "
                 f"price {score.get('price_score')}, distance {score.get('distance_score')})"
             )
             print(f"   Score reasons: {score.get('score_reasons')}")
@@ -829,13 +746,6 @@ def print_results(places: list[dict]) -> None:
             f"rating={place.get('google_rating') or '-'} "
             f"reviews={place.get('google_user_rating_count') or '-'} "
             f"price={place.get('google_price_level') or '-'}"
-        )
-        print(
-            "   Smiley: "
-            f"score={smiley.get('score') or '-'} "
-            f"date={smiley.get('latest_control_date') or '-'} "
-            f"match={smiley.get('match_status') or '-'} "
-            f"confidence={smiley.get('match_score') or '-'}"
         )
 
         if place.get("weather_error"):
@@ -911,12 +821,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lat", type=parse_float, help="Din latitude, fx 55.6761")
     parser.add_argument("--lon", type=parse_float, help="Din longitude, fx 12.5683")
     parser.add_argument(
-        "--csv",
-        type=Path,
-        default=DEFAULT_PLACES_CSV,
-        help=f"CSV med outdoor seating-steder. Default: {DEFAULT_PLACES_CSV}",
-    )
-    parser.add_argument(
         "--radius-m",
         type=float,
         default=1500,
@@ -940,24 +844,7 @@ def parse_args() -> argparse.Namespace:
         "--categories",
         type=parse_categories,
         default=DEFAULT_CATEGORIES,
-        help="Kategorier fra CSV, fx bar,pub,biergarten eller bar,pub,restaurant.",
-    )
-    parser.add_argument(
-        "--smiley-xml",
-        type=Path,
-        default=DEFAULT_SMILEY_XML,
-        help=f"FindSmiley XML-fil. Default: {DEFAULT_SMILEY_XML}",
-    )
-    parser.add_argument(
-        "--skip-smiley",
-        action="store_true",
-        help="Spring smiley-match over.",
-    )
-    parser.add_argument(
-        "--smiley-min-match-score",
-        type=float,
-        default=0.62,
-        help="Minimum match-score for at acceptere et smiley-match.",
+        help="Kategorier fra Supabase, fx bar,pub,biergarten eller bar,pub,restaurant.",
     )
     parser.add_argument(
         "--shadow-radius-m",
@@ -993,17 +880,39 @@ def parse_args() -> argparse.Namespace:
         help="Pause mellem nye Overpass-kald til bygninger. Cache hits venter ikke.",
     )
     parser.add_argument(
+        "--include-shadow",
+        action="store_true",
+        help="Hent OSM-bygninger og beregn skygge. Kan vaere langsomt pga. Overpass API.",
+    )
+    parser.add_argument(
+        "--shadow-cache-minutes",
+        type=int,
+        default=15,
+        help="Antal minutter per ny Supabase shadow-cache bucket.",
+    )
+    parser.add_argument(
+        "--shadow-cache-max-age-minutes",
+        type=int,
+        default=120,
+        help="Maks alder i minutter for cache-rækker der maa genbruges.",
+    )
+    parser.add_argument(
+        "--refresh-shadow-cache",
+        action="store_true",
+        help="Ignorer eksisterende shadow-cache og skriv nye beregninger.",
+    )
+    parser.add_argument(
         "--skip-shadow",
         action="store_true",
-        help="Spring skyggeberegningen over. Godt til hurtig test.",
+        help="Beholdt for gamle kommandoer. Skyggeberegning er nu slaaet fra som default.",
     )
     parser.add_argument(
         "--shadow-point-mode",
         choices=("outdoor", "place"),
         default="outdoor",
         help=(
-            "outdoor flytter testpunktet ud til naermeste bygningskant, hvis CSV-punktet "
-            "ligger inde i en bygning. place bruger CSV-koordinatet direkte."
+            "outdoor flytter testpunktet ud til naermeste bygningskant, hvis Supabase-punktet "
+            "ligger inde i en bygning. place bruger Supabase-koordinatet direkte."
         ),
     )
     parser.add_argument(
@@ -1032,21 +941,14 @@ def main() -> None:
     user_lat = args.lat if args.lat is not None else prompt_for_coordinate("Latitude")
     user_lon = args.lon if args.lon is not None else prompt_for_coordinate("Longitude")
 
-    places = load_places(args.csv, args.categories)
+    places = load_places_from_supabase(args.categories)
     candidate_limit = args.candidate_limit or args.limit
     nearby = find_nearby_places(user_lat, user_lon, places, args.radius_m, candidate_limit)
     enriched = nearby
 
-    if not args.skip_smiley:
-        enriched = add_smiley_to_places(
-            enriched,
-            smiley_xml_path=args.smiley_xml,
-            min_match_score=args.smiley_min_match_score,
-        )
-
     enriched = add_weather_to_places(enriched)
 
-    if not args.skip_shadow:
+    if args.include_shadow and not args.skip_shadow:
         enriched = add_shadow_to_places(
             enriched,
             radius_m=args.shadow_radius_m,
@@ -1055,6 +957,9 @@ def main() -> None:
             max_building_distance_m=args.shadow_max_building_distance_m,
             cache_grid_m=args.shadow_cache_grid_m,
             request_delay_s=args.shadow_request_delay_s,
+            shadow_cache_minutes=args.shadow_cache_minutes,
+            shadow_cache_max_age_minutes=args.shadow_cache_max_age_minutes,
+            refresh_shadow_cache=args.refresh_shadow_cache,
         )
 
     enriched = add_scores_to_places(enriched, search_radius_m=args.radius_m)
@@ -1071,7 +976,7 @@ def main() -> None:
 
     print(
         f"Fandt {len(enriched)} barer inden for {int(args.radius_m)} m "
-        f"ud af {len(places)} relevante CSV-steder."
+        f"ud af {len(places)} relevante Supabase-steder."
     )
     print_results(enriched)
 
