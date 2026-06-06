@@ -24,7 +24,7 @@ async function searchVenues() {
     if (!data.length) {
         resultsDiv.innerHTML = `
             <div class='search-result'>
-                <p>No results found</p>
+                <p>Ingen resultater fundet.</p>
             </div>
         `;
         return;
@@ -38,7 +38,7 @@ async function searchVenues() {
                 </a>
                 <p class='search-result-address'>${item.address}</p>
                 <p class='google-maps-rating'>
-                    Google Rating: ${item.google_rating} (${item.google_user_rating_count})
+                    Google rating: ${item.google_rating} (${item.google_user_rating_count})
                 </p>
             </div>
         `)

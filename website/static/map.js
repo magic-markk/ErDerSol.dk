@@ -47,7 +47,7 @@ function renderNearbyBars(bars) {
     if (!bars.length) {
         resultsDiv.innerHTML = `
             <div class="search-result">
-                <p>No nearby bars found</p>
+                <p>Ingen steder fundet her.</p>
             </div>
         `;
         return;
@@ -89,7 +89,7 @@ async function loadNearbyBars(lat, lon) {
     if (resultsDiv) {
         resultsDiv.innerHTML = `
             <div class="search-result">
-                <p>Finding the best nearby sunny spots...</p>
+                <p>Finder de bedste steder i solen...</p>
             </div>
         `;
     }
@@ -253,7 +253,7 @@ async function loadVenues() {
 
 function useMyLocation() {
     if (!navigator.geolocation) {
-        alert("Your browser does not support geolocation.");
+        alert("Din browser understotter ikke placering.");
         return;
     }
 
@@ -289,7 +289,7 @@ function useMyLocation() {
                 if (resultsDiv) {
                     resultsDiv.innerHTML = `
                         <div class="search-result">
-                            <p>Could not load nearby bars.</p>
+                            <p>Kunne ikke hente steder i naerheden.</p>
                         </div>
                     `;
                 }
@@ -297,7 +297,7 @@ function useMyLocation() {
         },
         (error) => {
             console.error(error);
-            alert("Could not get your location.");
+            alert("Kunne ikke hente din placering.");
         },
         {
             enableHighAccuracy: true,

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 import psycopg
 import requests
 
@@ -47,6 +47,11 @@ def home():
     query = request.args.get('search', '').strip()
 
     return render_template('home.html', initial_query=query)
+
+
+@app.route('/assets/<path:filename>')
+def assets(filename):
+    return send_from_directory(PROJECT_ROOT / 'assets', filename)
 
 @app.route('/bruger')
 def bruger():
