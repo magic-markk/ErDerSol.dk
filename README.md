@@ -1,14 +1,54 @@
 # DIS Project - ErDerSol.dk
-DIS Group Project
 
-README skal indeholde følgende dokumentation:
+## Description
 
-1. Our database model represented by an **E/R Diagram.**
-2. How to compile the web-app from source, including scripts to initialize the database.
-3. How to run and interact with the web app.
-4. Include an AI declaration (also if not used at all).
+- Web app for finding outdoor seating places in Copenhagen.
+- Helps users find places to enjoy a beer in the sun.
+- Built with Flask, JavaScript, MapLibre, Supabase, and PostgreSQL.
 
-Web-app'en skal interagere med databasen med **SQL,** samt bruge regular expressions eller context-free grammar parsing. (?)
+## Database model
+
+- E/R diagram: To be added.
+
+## Setup
+
+```bash
+git clone https://github.com/magic-markk/ErDerSol.dk.git
+cd ErDerSol.dk
+pip install -r requirements.txt
+```
+
+## Environment variables
+
+Create a `.env` file in the project root:
+
+```env
+SUPABASE_URL=[Supabase project url]
+SUPABASE_SERVICE_KEY=[Supabase service role key]
+DATABASE_URL=[Supabase database connection url]
+```
+
+Do not commit `.env`.
+
+## Run
+
+```bash
+cd website
+python app.py
+```
+
+Open:
+
+```text
+http://127.0.0.1:5000
+```
+
+## Usage
+
+- View venues on the map.
+- Click venues for information.
+- Search by name or address.
+- Use location button to center map on user location.
 
 
 ### .env file format for accessing Supabase database
