@@ -49,9 +49,3 @@ http://127.0.0.1:5000
 - Click venues for information.
 - Search by name or address.
 - Use location button to center map on user location.
-
-
-### .env file format for accessing Supabase database
-```
-DATABASE_URL=[Supabase database connection url]
-```
