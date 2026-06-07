@@ -9,6 +9,7 @@
 ## Database model
 
 - E/R diagram: To be added.
+- The database is hosted on Supabase.
 
 ## Setup
 
@@ -25,7 +26,6 @@ Create a `.env` file in the project root:
 ```env
 SUPABASE_URL=[Supabase project url]
 SUPABASE_SERVICE_KEY=[Supabase service role key]
-DATABASE_URL=[Supabase database connection url]
 ```
 
 Do not commit `.env`.
@@ -35,6 +35,12 @@ Do not commit `.env`.
 ```bash
 cd website
 python app.py
+```
+
+If `python` does not work, use:
+
+```bash
+python3 app.py
 ```
 
 Open:
