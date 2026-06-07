@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 import psycopg
 import requests
 
+import re
+
 import sys
 from pathlib import Path
 
@@ -18,7 +20,6 @@ from nearby_bars_weather import (
     load_places_from_supabase,
 )
 
-from werkzeug.routing import BaseConverter
 
 import os
 from dotenv import load_dotenv
@@ -31,12 +32,8 @@ DATABASE_URL = os.getenv('DATABASE_URL')
 app = Flask(__name__)
 
 
-class RegexConverter(BaseConverter):
-    def __init__(self, url_map, *items):
-        super(RegexConverter, self).__init__(url_map)
-        self.regex = items[0]
+WHITESPACE_REGEX_PATTERN = re.compile(r'\s+')
 
-app.url_map.converters['regex'] = RegexConverter
 
 @app.route('/')
 def home():
@@ -93,6 +90,15 @@ def search():
     '''
     data = request.get_json()
     query = data.get("query", "").strip()
+    query = WHITESPACE_REGEX_PATTERN.sub(" ", query)
+
+    regex_pattern = r'(?<!\w)(hjem|C)(?!\w)'
+
+    if re.search(regex_pattern, query, re.IGNORECASE):
+        user_wants_to_go_home = True
+        actual_query = 'Caféen?'
+    else:
+        user_wants_to_go_home = False
 
     # basic safety checks
     if not query or len(query) > 50:
@@ -111,8 +117,18 @@ def search():
     pattern = f"%{query.replace('%', '').replace('_', '')}%"
 
     with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
-        cur.execute(sql, {"q": pattern})
-        rows = cur.fetchall()
+        if user_wants_to_go_home:
+            actual_pattern = f"%{actual_query.replace('%', '').replace('_', '')}%"
+
+            cur.execute(sql, {"q": actual_pattern})
+            rows = cur.fetchall()
+
+            cur.execute(sql, {"q": pattern})
+            rows += cur.fetchall()
+
+        else:
+            cur.execute(sql, {"q": pattern})
+            rows = cur.fetchall()
 
     conn.close()
 
