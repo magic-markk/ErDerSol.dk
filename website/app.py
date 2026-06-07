@@ -135,8 +135,8 @@ def nearby_bars():
     conn = psycopg.connect(DATABASE_URL, sslmode='require', prepare_threshold=0)
 
     radius_m = 3000
-    limit = 31
-    candidate_limit = 31
+    limit = 10
+    candidate_limit = 10
 
     places = load_places_from_supabase(DEFAULT_CATEGORIES, conn)
     nearby = find_nearby_places(
