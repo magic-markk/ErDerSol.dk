@@ -12,9 +12,8 @@
 - The database is hosted on Supabase.
 
 ER-diagram with crow's foot notation:
-![ER diagram is found in root directory][ERD]
+![ER diagram is found in root directory](https://github.com/magic-markk/ErDerSol.dk/blob/main/margin-ER-Diagram%202.0.png "ErDerSol ER-diagram")
 
-[ERD]: https://github.com/magic-markk/ErDerSol.dk/blob/main/margin-ER-Diagram%202.0.png "ErDerSol ER-diagram"
 
 
 ## Setup
