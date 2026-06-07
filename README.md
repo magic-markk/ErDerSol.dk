@@ -34,7 +34,7 @@ Create a `.env` file in the project root:
 
 ```env
 DATABASE_URL=[Supabase database url]
-MY_EMAIL=[Specific email to use for Overpass API queries]
+MY_EMAIL=[Specific email to use for met.no API queries]
 ```
 
 Do not commit `.env`.
