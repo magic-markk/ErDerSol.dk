@@ -75,7 +75,7 @@ http://127.0.0.1:5000
 - Search by name or address.
 - Use location button to center map on user location. This also sends a search query of bars and pubs within 3km of your location and ranks them based on how much sun the venue has, as well as other metrics specified in the file `sun_app/bar_scoring.py`. Be aware that this may take a while on venues that have not yet been recently cached.
 
-## Current URL for using web app
+## Current URL we host the web app on
 [erdersol-dk.onrender.com](https://erdersol-dk.onrender.com)
 
 This is done on Render.com's free hosting plan, so application may need 30 seconds to start.
