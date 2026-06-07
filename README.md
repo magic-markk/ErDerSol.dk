@@ -81,6 +81,9 @@ Many SELECT statements can be found in the `website/app.py` file. Insert and upd
 #### Regex:
 A regular expression pattern can be found in the `website/app.py` to find any search queries containing "hjem" or "C" in the user's search query. If there is a pattern match, the app also includes the search results of another search query "Caféen?". Regex is also used in the same file to remove excess whitespace from search queries.
 
+#### AI declation
+Find our AI declaration in the `AiDeclaration_ErDerSol_udfyldt.docx` file
+
 ## Usage
 
 - View venues on the map.
