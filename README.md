@@ -27,7 +27,7 @@ pip install -r requirements.txt
 
 Run the SQL script `supabase/create_outdoor_seating_places_table.sql` to set up DB table containing venues with outdoor seating. Afterwards, run the SQL script `supabase/create_bar_shadow_cache_table.sql` to create the cache table for storing shadow, building, and weather data for the venues.
 
-Use the existing CSV file `Data/outdoor_seating_places.csv` to fill the `outdoor_seating_places` table. Import the CSV into Supabase after running `supabase/create_outdoor_seating_places_table.sql`.
+Use the existing CSV file `outdoor_seating_places.csv` to fill the `outdoor_seating_places` table. Import the CSV into Supabase after running `supabase/create_outdoor_seating_places_table.sql`.
 
 
 ## Environment variables
