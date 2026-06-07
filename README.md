@@ -79,7 +79,7 @@ http://127.0.0.1:5000
 Many SELECT statements can be found in the `website/app.py` file. Insert and update statements can also be found in the `sun_app/nearby_bars_weather.py` script, which are used to update the bar_shadow_cache table. 
 
 #### Regex:
-A regular expression pattern can be found in the `website/app.py` to find any search queries containing "hjem" or "C" in the user's search query. If there is a pattern match, the app also includes the search results of another search query "Caféen?".
+A regular expression pattern can be found in the `website/app.py` to find any search queries containing "hjem" or "C" in the user's search query. If there is a pattern match, the app also includes the search results of another search query "Caféen?". Regex is also used in the same file to remove excess whitespace from search queries.
 
 ## Usage
 
