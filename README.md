@@ -9,9 +9,13 @@
 - Built with Flask, JavaScript, MapLibre, Supabase, and PostgreSQL.
 
 ## Database model
-
-- E/R diagram: To be added.
 - The database is hosted on Supabase.
+
+ER-diagram with crow's foot notation:
+![ER diagram is found in root directory][ERD]
+
+[ERD]: https://github.com/magic-markk/ErDerSol.dk/blob/main/margin-ER-Diagram%202.0.png "ErDerSol ER-diagram"
+
 
 ## Setup
 
