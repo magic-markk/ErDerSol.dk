@@ -393,17 +393,6 @@ def load_shadow_cache(
         cur.execute(sql, (oldest_usable_cache, place_ids))
         rows = cur.fetchall()
 
-
-    # response = (
-    #     supabase
-    #     .table("bar_shadow_cache")
-    #     .select("*")
-    #     .gte("calculated_for", oldest_usable_cache.isoformat())
-    #     .in_("outdoor_seating_place_id", place_ids)
-    #     .order("calculated_for", desc=True)
-    #     .execute()
-    # )
-
     latest_rows = {}
 
     for row in rows:

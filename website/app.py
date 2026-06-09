@@ -64,15 +64,8 @@ def auto_query():
     conn = psycopg.connect(DATABASE_URL, sslmode='require', prepare_threshold=0)
 
     sql = '''
-        SELECT
-            V.name,
-            V.address,
-            V.lat,
-            V.lon,
-            V.google_maps_uri,
-            W.cloud_area_fraction AS cloud_area
-        FROM outdoor_seating_places V
-            INNER JOIN venue_weather_cache W ON V.id = W.venue_id;
+        SELECT name, address, lat, lon, google_maps_uri
+        FROM outdoor_seating_places
     '''
 
     with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
